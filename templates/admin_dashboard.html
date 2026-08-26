@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Admin Dashboard — AuthSystem</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ════════════════════════ MODALS ════════════════════════════════════════ -->
+
+<!-- Add/Edit User Modal -->
+<div class="modal-overlay" id="modal-user">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal-header">
+      <div class="modal-title" id="user-modal-title">Create App User</div>
+      <button class="modal-close" onclick="closeModal('modal-user')">✕</button>
+    </div>
+    <input type="hidden" id="edit-user-id"/>
+    
+    <div class="form-group">
+      <label class="form-label">Username (1 char to unlimited)</label>
+      <input class="form-control" id="modal-username" placeholder="e.g. user1 or u or client_x" autocomplete="off"/>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label" id="pwd-label">Password (1 char to unlimited)</label>
+      <div class="input-group">
+        <input class="form-control" id="modal-password" type="password" placeholder="e.g. 1 or pass123" autocomplete="new-password"/>
+        <span class="input-icon" onclick="toggleModalPwd()">👁</span>
+      </div>
+      <div class="text-xs text-muted mt-8" id="pwd-hint" style="display:none;">Leave blank to keep existing password</div>
+    </div>
+
+    <!-- Duration / Expiry Selection (KeyAuth style) -->
+    <div class="form-group">
+      <label class="form-label">⏱️ Subscription Duration / Expiry</label>
+      <select class="form-control" id="modal-duration-type" onchange="toggleCustomDuration()">
+        <option value="lifetime">♾️ Lifetime (Never Expire)</option>
+        <option value="1d">1 Day</option>
+        <option value="3d">3 Days</option>
+        <option value="7d">7 Days (1 Week)</option>
+        <option value="14d">14 Days (2 Weeks)</option>
+        <option value="30d" selected>30 Days (1 Month)</option>
+        <option value="60d">60 Days (2 Months)</option>
+        <option value="90d">90 Days (3 Months)</option>
+        <option value="180d">180 Days (6 Months)</option>
+        <option value="365d">365 Days (1 Year)</option>
+        <option value="custom_date">📅 Custom Expiration Date</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="custom-duration-group" style="display:none;">
+      <label class="form-label">Select Expiry Date</label>
+      <input class="form-control" id="modal-custom-duration" type="datetime-local"/>
+    </div>
+
+    <div class="form-group" id="active-group" style="display:none;">
+      <label class="form-label">Account Status</label>
+      <select class="form-control" id="modal-active">
+        <option value="true">Active (Enabled)</option>
+        <option value="false">Suspended / Disabled</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="hwid-group" style="display:none;">
+      <label class="form-label">HWID Binding</label>
+      <div class="flex-between">
+        <span class="key-mono text-sm" id="modal-hwid-text">Not Bound</span>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="resetUserHwidFromModal()">🔄 Reset HWID Lock</button>
+      </div>
+      <input type="hidden" id="modal-reset-hwid-flag" value="false"/>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-user')">Cancel</button>
+      <button class="btn btn-primary" id="save-user-btn" onclick="saveUser()">💾 Save User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit License Modal (KeyAuth style) -->
+<div class="modal-overlay" id="modal-license">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal-header">
+      <div class="modal-title" id="lic-modal-title">Generate License Key</div>
+      <button class="modal-close" onclick="closeModal('modal-license')">✕</button>
+    </div>
+    <input type="hidden" id="edit-lic-id"/>
+    
+    <!-- License Key Input (Custom Name or Random) -->
+    <div class="form-group">
+      <label class="form-label">🔑 License Key (Type Custom or Generate Random)</label>
+      <div class="flex-gap">
+        <input class="form-control key-mono" id="modal-lic-key" placeholder="e.g. VIP-KEY-123 or click Random" style="flex:1;font-size:14px;"/>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="setRandomLicenseKey()">🎲 Random</button>
+      </div>
+      <div class="text-xs text-muted mt-8">You can type your own custom license key (any format) or click Random.</div>
+    </div>
+
+    <!-- Duration / Expiry Selection -->
+    <div class="form-group">
+      <label class="form-label">⏱️ License Duration / Expiry</label>
+      <select class="form-control" id="modal-lic-duration-type" onchange="toggleLicCustomDuration()">
+        <option value="lifetime">♾️ Lifetime (Never Expire)</option>
+        <option value="1d">1 Day</option>
+        <option value="3d">3 Days</option>
+        <option value="7d">7 Days (1 Week)</option>
+        <option value="14d">14 Days (2 Weeks)</option>
+        <option value="30d" selected>30 Days (1 Month)</option>
+        <option value="60d">60 Days (2 Months)</option>
+        <option value="90d">90 Days (3 Months)</option>
+        <option value="180d">180 Days (6 Months)</option>
+        <option value="365d">365 Days (1 Year)</option>
+        <option value="custom_date">📅 Custom Expiration Date</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="lic-custom-duration-group" style="display:none;">
+      <label class="form-label">Select Expiry Date</label>
+      <input class="form-control" id="modal-lic-custom-duration" type="datetime-local"/>
+    </div>
+
+    <div class="form-group" id="lic-status-group" style="display:none;">
+      <label class="form-label">Status</label>
+      <select class="form-control" id="modal-lic-status">
+        <option value="active">Active</option>
+        <option value="used">Used</option>
+        <option value="expired">Expired</option>
+        <option value="revoked">Revoked</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="lic-hwid-group" style="display:none;">
+      <label class="form-label">HWID Binding</label>
+      <div class="flex-between">
+        <span class="key-mono text-sm" id="modal-lic-hwid-text">Not Bound</span>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="resetLicHwidFromModal()">🔄 Reset HWID Lock</button>
+      </div>
+      <input type="hidden" id="modal-lic-reset-hwid-flag" value="false"/>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-license')">Cancel</button>
+      <button class="btn btn-primary" id="save-lic-btn" onclick="saveLicense()">💾 Save License</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="modal-delete">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title">Confirm Delete</div>
+      <button class="modal-close" onclick="closeModal('modal-delete')">✕</button>
+    </div>
+    <div class="alert alert-error" style="margin-bottom:0;">
+      ⚠️ <span id="delete-msg">Are you sure you want to delete this user?</span>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-delete')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-btn">🗑 Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Adjust Credits Modal -->
+<div class="modal-overlay" id="modal-credits">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <div class="modal-title">Adjust Reseller Credits</div>
+      <button class="modal-close" onclick="closeModal('modal-credits')">✕</button>
+    </div>
+    <input type="hidden" id="credit-reseller-id"/>
+    <div style="margin-bottom:14px;">
+      <div class="text-xs text-muted mb-4">RESELLER</div>
+      <div class="fw-600" id="credit-reseller-name" style="font-size:16px;color:#fff;"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Action</label>
+      <select class="form-control" id="credit-action">
+        <option value="add">➕ Add Credits</option>
+        <option value="remove">➖ Remove / Deduct Credits</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Amount (Credits)</label>
+      <input class="form-control" id="credit-amount" type="number" min="1" value="50" placeholder="e.g. 50"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-credits')">Cancel</button>
+      <button class="btn btn-primary" id="save-credits-btn" onclick="saveCreditsAdjustment()">💳 Apply Credits</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Result Modal -->
+<div class="modal-overlay" id="modal-reset-result">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <div class="modal-title">Action Completed</div>
+      <button class="modal-close" onclick="closeModal('modal-reset-result')">✕</button>
+    </div>
+    <div id="reset-result-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('modal-reset-result')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ LAYOUT ═══════════════════════════════════════ -->
+<div class="dashboard-layout">
+
+  <!-- ══════════════════════ SIDEBAR ══════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🛡️</div>
+      <div class="logo-text">
+        AuthSystem
+        <div class="logo-sub">C# / EXE Admin Panel</div>
+      </div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" style="background:linear-gradient(135deg,#7c3aed,#06b6d4);">A</div>
+      <div class="user-info">
+        <div class="user-name">{{ current_user.username }}</div>
+        <span class="user-role badge-admin" style="font-size:10px;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.4);border-radius:99px;padding:1px 8px;color:var(--purple-light);font-weight:600;">Administrator</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Dashboard</div>
+      <div class="nav-item active" id="nav-overview" onclick="switchTab('overview')">
+        <span class="nav-icon">📊</span> Overview
+      </div>
+      <div class="nav-section-label">Authentication</div>
+      <div class="nav-item" id="nav-users" onclick="switchTab('users')">
+        <span class="nav-icon">👥</span> User / Password
+      </div>
+      <div class="nav-item" id="nav-licenses" onclick="switchTab('licenses')">
+        <span class="nav-icon">🔑</span> License Keys
+      </div>
+      <div class="nav-section-label">Tools</div>
+      <div class="nav-item" id="nav-api-docs" onclick="switchTab('api-docs')">
+        <span class="nav-icon">📖</span> API Docs (C# / Python)
+      </div>
+      <div class="nav-item" id="nav-reset" onclick="switchTab('reset')">
+        <span class="nav-icon">🔄</span> User / License Reset
+      </div>
+      <div class="nav-item" id="nav-resellers" onclick="switchTab('resellers')">
+        <span class="nav-icon">👑</span> Reseller Management
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="{{ url_for('logout') }}" class="btn btn-danger btn-block" style="text-decoration:none;">
+        🚪 Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <!-- ══════════════════════ MAIN ══════════════════════════ -->
+  <main class="main-content">
+
+    <!-- ─── OVERVIEW ─────────────────────────────────────── -->
+    <section id="tab-overview" class="tab-section">
+      <div class="section-header">
+        <div class="section-title">Auth Server Overview</div>
+        <div class="section-sub">KeyAuth-style authentication status & live activity</div>
+      </div>
+
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card purple"><div class="stat-icon">👥</div><div class="stat-value" id="s-total-users">—</div><div class="stat-label">Total App Users</div></div>
+        <div class="stat-card cyan"><div class="stat-icon">✅</div><div class="stat-value" id="s-active-users">—</div><div class="stat-label">Active Subscriptions</div></div>
+        <div class="stat-card green"><div class="stat-icon">🔑</div><div class="stat-value" id="s-total-lic">—</div><div class="stat-label">Total Licenses</div></div>
+        <div class="stat-card yellow"><div class="stat-icon">🟢</div><div class="stat-value" id="s-active-lic">—</div><div class="stat-label">Active Licenses</div></div>
+        <div class="stat-card purple"><div class="stat-icon">👑</div><div class="stat-value" id="s-total-resellers">—</div><div class="stat-label">Total Resellers</div></div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="card mb-24">
+        <div class="card-title"><span>⚡</span> Quick Management Actions</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="openAddUserModal()">➕ Create App User</button>
+          <button class="btn btn-secondary" onclick="switchTab('licenses');openAddLicModal()">🔑 Generate License</button>
+          <button class="btn btn-secondary" onclick="switchTab('resellers')">👑 Reseller Management</button>
+          <button class="btn btn-secondary" onclick="switchTab('api-docs')">📖 API Docs & Master Key</button>
+        </div>
+      </div>
+
+      <!-- Recent activity -->
+      <div class="card">
+        <div class="card-title"><span>📋</span> Authentication & System Logs</div>
+        <ul class="activity-list" id="activity-list">
+          <li class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Loading activity…</div></div></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ─── USERS / PASSWORDS ──────────────────────────────── -->
+    <section id="tab-users" class="tab-section hidden">
+      <div class="section-header">
+        <div class="section-title">App User / Password Management</div>
+        <div class="section-sub">Create and manage EXE client logins (no length limits, custom duration & HWID support)</div>
+      </div>
+
+      <div class="flex-between mb-16">
+        <div class="flex-gap">
+          <input class="form-control" id="user-search" placeholder="🔍 Search by username or HWID…" oninput="filterUsers()" style="width:280px;"/>
+        </div>
+        <button class="btn btn-primary" onclick="openAddUserModal()">➕ Create App User</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Username</th>
+              <th>Status</th>
+              <th>Time Remaining</th>
+              <th>Expiration Date</th>
+              <th>HWID Lock</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody">
+            <tr><td colspan="7" class="text-center text-muted" style="padding:40px;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ─── LICENSES ──────────────────────────────────────── -->
+    <section id="tab-licenses" class="tab-section hidden">
+      <div class="section-header">
+        <div class="section-title">License Key Management</div>
+        <div class="section-sub">Generate and assign software keys with custom duration</div>
+      </div>
+
+      <div class="flex-between mb-16">
+        <div class="flex-gap">
+          <input class="form-control" id="lic-search" placeholder="🔍 Search licenses…" oninput="filterLicenses()" style="width:260px;"/>
+          <select class="form-control" id="lic-filter" onchange="filterLicenses()" style="width:160px;">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="expired">Expired</option>
+            <option value="revoked">Revoked</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="openAddLicModal()">🔑 Generate License</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>License Key</th>
+              <th>Status</th>
+              <th>Time Remaining</th>
+              <th>Expiration Date</th>
+              <th>HWID</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="licenses-tbody">
+            <tr><td colspan="7" class="text-center text-muted" style="padding:40px;">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ─── API DOCS ──────────────────────────────────────── -->
+    <section id="tab-api-docs" class="tab-section hidden">
+      <div class="section-header">
+        <div class="section-title">API Documentation & Reseller Bot Integration</div>
+        <div class="section-sub">Master API key, endpoint guide & Telegram bot documentation</div>
+      </div>
+
+      <!-- Master API Key Card -->
+      <div class="card mb-24">
+        <div class="card-title" style="font-size:16px;font-weight:700;margin-bottom:12px;">Your Master API Access Key</div>
+        <div class="form-group mb-8">
+          <label class="form-label" style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">Admin API Key</label>
+          <div class="flex-gap">
+            <input class="form-control key-mono" id="admin-api-key-input" value="{{ admin_api_key }}" readonly style="flex:1;background:rgba(255,255,255,0.03);color:#e4e4e7;letter-spacing:1px;font-size:13px;border-radius:8px;"/>
+            <button type="button" class="btn btn-secondary" style="border-radius:8px;padding:0 20px;" onclick="copyText(document.getElementById('admin-api-key-input').value, 'Master API Key copied!')">Copy</button>
+          </div>
+          <div class="text-xs text-muted mt-8">Use this master key to authorize administrative requests to the external management API. Keep it confidential.</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="gap:24px;align-items:start;">
+        <!-- Editor -->
+        <div class="card">
+          <div class="card-title"><span>✏️</span> Documentation Editor</div>
+          <div class="form-group">
+            <label class="form-label">Document Title</label>
+            <input class="form-control" id="doc-title" placeholder="API Documentation"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Content (Markdown)</label>
+            <textarea class="form-control" id="doc-content" rows="20" placeholder="Write API docs in Markdown…" oninput="livePreview()"></textarea>
+          </div>
+          <div class="flex-gap">
+            <button class="btn btn-primary flex-1" onclick="saveDocs()">💾 Save Documentation</button>
+          </div>
+          <div class="text-xs text-muted mt-8" id="docs-saved-at"></div>
+        </div>
+        <!-- Preview -->
+        <div class="card">
+          <div class="card-title"><span>👁</span> Live Documentation Preview</div>
+          <div class="docs-content" id="docs-preview" style="min-height:300px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── RESET ─────────────────────────────────────────── -->
+    <section id="tab-reset" class="tab-section hidden">
+      <div class="section-header">
+        <div class="section-title">User & License Reset Hub</div>
+        <div class="section-sub">Reset passwords, extend subscriptions, reset HWID hardware locks, or generate login links</div>
+      </div>
+
+      <!-- User selection -->
+      <div class="card mb-24">
+        <div class="card-title"><span>👤</span> Select App User</div>
+        <div class="flex-gap" style="flex-wrap:wrap;">
+          <select class="form-control" id="reset-user-select" style="max-width:320px;" onchange="onResetUserChange()">
+            <option value="">— Choose a user account —</option>
+          </select>
+          <div id="selected-user-badge" class="hidden">
+            <span class="badge badge-active" id="selected-user-name"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="grid-3" id="reset-actions" style="display:none;">
+
+        <!-- Reset Password -->
+        <div class="card">
+          <div class="card-title"><span>🔒</span> Reset Password</div>
+          <div class="form-group">
+            <label class="form-label">New Password (Any length)</label>
+            <input class="form-control" id="reset-pwd" type="password" placeholder="Enter new password"/>
+          </div>
+          <button class="btn btn-primary btn-block mt-16" onclick="doReset('password')">🔒 Update Password</button>
+        </div>
+
+        <!-- Extend / Set Duration -->
+        <div class="card">
+          <div class="card-title"><span>⏱️</span> Set Subscription Duration</div>
+          <div class="form-group">
+            <label class="form-label">Select New Duration</label>
+            <select class="form-control" id="reset-duration-select">
+              <option value="lifetime">♾️ Lifetime</option>
+              <option value="1d">1 Day</option>
+              <option value="7d">7 Days</option>
+              <option value="30d" selected>30 Days</option>
+              <option value="90d">90 Days</option>
+              <option value="365d">365 Days</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-block mt-16" onclick="doReset('duration')">⏱️ Update Duration</button>
+        </div>
+
+        <!-- Reset HWID -->
+        <div class="card">
+          <div class="card-title"><span>💻</span> Reset HWID Lock</div>
+          <div class="alert alert-info mb-16">
+            Clears the hardware lock so the user can log in from a new PC.
+          </div>
+          <button class="btn btn-secondary btn-block mt-16" onclick="doReset('hwid')">🔄 Clear HWID Lock</button>
+        </div>
+
+      </div>
+
+      <div id="reset-placeholder" class="card" style="text-align:center;padding:60px 24px;">
+        <div style="font-size:52px;margin-bottom:12px;">🔄</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:8px;">Select an App User Above</div>
+        <div class="text-2">Choose a user account to manage password, duration expiry, or clear their HWID lock.</div>
+      </div>
+    </section>
+
+    <!-- ─── RESELLER MANAGEMENT ────────────────────────── -->
+    <section id="tab-resellers" class="tab-section hidden">
+      <div class="section-header">
+        <div class="section-title">Reseller Management</div>
+        <div class="section-sub">Create reseller accounts, allocate credits, and manage/pause reseller sub-panels</div>
+      </div>
+
+      <div class="grid-2" style="gap:24px;align-items:start;">
+
+        <!-- Left: Add Reseller Form -->
+        <div class="card">
+          <div class="card-title"><span>➕</span> Add New Reseller</div>
+
+          <div class="form-group">
+            <label class="form-label">Reseller Username</label>
+            <input class="form-control" id="new-reseller-user" placeholder="e.g. reseller_alpha" autocomplete="off"/>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Reseller Password</label>
+            <div class="input-group">
+              <input class="form-control" id="new-reseller-pass" type="password" placeholder="Enter password (any length)" autocomplete="new-password"/>
+              <span class="input-icon" onclick="toggleResellerPass()">👁</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Credits Balance</label>
+            <input class="form-control" id="new-reseller-credits" type="number" min="0" value="100" placeholder="e.g. 100"/>
+            <div class="text-xs text-muted mt-8">Each user/key created by this reseller will deduct 1 credit.</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Reseller Panel Name</label>
+            <input class="form-control" id="new-reseller-panel" placeholder="e.g. Alpha VIP Store Panel"/>
+          </div>
+
+          <button class="btn btn-primary btn-block btn-lg" id="add-reseller-btn" onclick="addNewReseller()">
+            ➕ Add Reseller
+          </button>
+        </div>
+
+        <!-- Right: Resellers List & Live Controls -->
+        <div class="card">
+          <div class="flex-between mb-16">
+            <div class="card-title" style="margin-bottom:0;"><span>👑</span> Active Resellers</div>
+            <span class="badge badge-active" id="reseller-count-badge">0 Resellers</span>
+          </div>
+
+          <div class="form-group mb-16">
+            <input class="form-control" id="search-resellers" placeholder="🔍 Search reseller username or panel…" oninput="filterResellers()"/>
+          </div>
+
+          <div id="resellers-list-container" style="display:flex;flex-direction:column;gap:12px;">
+            <!-- Loaded via JS -->
+            <div class="text-center text-muted" style="padding:40px 0;">Loading resellers…</div>
+          </div>
+
+          <div id="resellers-pagination-container" class="pagination-container" style="margin-top:16px;"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ════════════════════════ JAVASCRIPT ════════════════════════════════════ -->
+<script>
+/* ─── State ─────────────────────────────────────────────────────────── */
+let usersData = [];
+let licensesData = [];
+let resellersData = [];
+
+/* ─── Tab Switching ──────────────────────────────────────────────────── */
+function switchTab(name) {
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.remove('hidden');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'overview')  loadStats();
+  if (name === 'users')     loadUsers();
+  if (name === 'licenses')  loadLicenses();
+  if (name === 'api-docs')  loadDocs();
+  if (name === 'reset')     loadResetUsers();
+  if (name === 'resellers') loadResellers();
+}
+
+/* ─── Toast ─────────────────────────────────────────────────────────── */
+function showToast(msg, type = 'success') {
+  const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span class="toast-icon">${icons[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span><span class="toast-close" onclick="this.parentElement.remove()">✕</span>`;
+  c.appendChild(t);
+  setTimeout(() => { if (t.parentElement) t.remove(); }, 5000);
+}
+
+/* ─── API Helpers ────────────────────────────────────────────────────── */
+async function apiGet(url) {
+  const r = await fetch(url);
+  return r.json();
+}
+async function apiPost(url, data) {
+  const r = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  return r.json();
+}
+async function apiPut(url, data) {
+  const r = await fetch(url, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  return r.json();
+}
+async function apiDelete(url) {
+  const r = await fetch(url, { method: 'DELETE' });
+  return r.json();
+}
+
+/* ─── Modal helpers ──────────────────────────────────────────────────── */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+/* ─── Copy Text ─── */
+function copyText(text, successMsg = 'Copied!') {
+  if (!text) return;
+  navigator.clipboard.writeText(text)
+    .then(() => showToast(successMsg, 'success'))
+    .catch(() => showToast('Copy failed', 'error'));
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ═══════════════════════════ OVERVIEW ════════════════════════════════ */
+async function loadStats() {
+  try {
+    const data = await apiGet('{{ url_for("admin_stats") }}');
+    document.getElementById('s-total-users').textContent = data.total_users;
+    document.getElementById('s-active-users').textContent = data.active_users;
+    document.getElementById('s-total-lic').textContent = data.total_licenses;
+    document.getElementById('s-active-lic').textContent = data.active_licenses;
+    document.getElementById('s-total-resellers').textContent = data.total_resellers || 0;
+
+    const list = document.getElementById('activity-list');
+    if (!data.activity || data.activity.length === 0) {
+      list.innerHTML = '<li class="activity-item"><div class="activity-dot"></div><div><div class="activity-text text-muted">No recent activity</div></div></li>';
+    } else {
+      list.innerHTML = data.activity.map(a => `
+        <li class="activity-item">
+          <div class="activity-dot"></div>
+          <div>
+            <div class="activity-text">${esc(a.action)}</div>
+            <div class="activity-time">by ${esc(a.actor)} &mdash; ${esc(a.timestamp)}</div>
+          </div>
+        </li>`).join('');
+    }
+  } catch(e) { showToast('Failed to load stats', 'error'); }
+}
+
+/* ═══════════════════════════ USERS ═══════════════════════════════════ */
+async function loadUsers() {
+  try {
+    usersData = await apiGet('{{ url_for("admin_list_users") }}');
+    renderUsers(usersData);
+  } catch(e) { showToast('Failed to load users', 'error'); }
+}
+
+function renderUsers(users) {
+  const tb = document.getElementById('users-tbody');
+  if (!users.length) {
+    tb.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--text3);">No app users created yet. Click "Create App User" above!</td></tr>';
+    return;
+  }
+  tb.innerHTML = users.map(u => `
+    <tr>
+      <td class="text-muted text-sm">#${u.id}</td>
+      <td><strong>${esc(u.username)}</strong></td>
+      <td>
+        <span class="badge ${u.is_expired ? 'badge-danger' : (u.is_active ? 'badge-active' : 'badge-inactive')}">
+          ${esc(u.status_label)}
+        </span>
+      </td>
+      <td>
+        <span class="key-mono" style="color:${u.is_expired ? 'var(--red)' : 'var(--cyan-light)'}">
+          ${esc(u.time_left)}
+        </span>
+      </td>
+      <td class="text-sm text-muted">${esc(u.expires_at)}</td>
+      <td>
+        <span class="text-xs ${u.hwid === 'Not Bound' ? 'text-muted' : 'key-mono'}">
+          ${esc(u.hwid)}
+        </span>
+      </td>
+      <td>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-secondary btn-sm" onclick="openEditUserModal(${JSON.stringify(u).replace(/"/g,'&quot;')})">✏️ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteUser(${u.id},'${esc(u.username)}')">🗑</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function filterUsers() {
+  const q = document.getElementById('user-search').value.toLowerCase();
+  renderUsers(usersData.filter(u => u.username.toLowerCase().includes(q) || (u.hwid && u.hwid.toLowerCase().includes(q))));
+}
+
+function toggleCustomDuration() {
+  const val = document.getElementById('modal-duration-type').value;
+  document.getElementById('custom-duration-group').style.display = (val === 'custom_date') ? 'block' : 'none';
+}
+
+function openAddUserModal() {
+  document.getElementById('user-modal-title').textContent = 'Create App User';
+  document.getElementById('edit-user-id').value = '';
+  document.getElementById('modal-username').value = '';
+  document.getElementById('modal-password').value = '';
+  document.getElementById('pwd-label').textContent = 'Password (Any length, e.g. 1 char)';
+  document.getElementById('pwd-hint').style.display = 'none';
+  document.getElementById('modal-duration-type').value = '30d';
+  document.getElementById('custom-duration-group').style.display = 'none';
+  document.getElementById('active-group').style.display = 'none';
+  document.getElementById('hwid-group').style.display = 'none';
+  document.getElementById('modal-reset-hwid-flag').value = 'false';
+  openModal('modal-user');
+}
+
+function openEditUserModal(u) {
+  document.getElementById('user-modal-title').textContent = 'Edit App User: ' + u.username;
+  document.getElementById('edit-user-id').value = u.id;
+  document.getElementById('modal-username').value = u.username;
+  document.getElementById('modal-password').value = '';
+  document.getElementById('pwd-label').textContent = 'New Password (leave blank to keep)';
+  document.getElementById('pwd-hint').style.display = 'block';
+  document.getElementById('active-group').style.display = 'block';
+  document.getElementById('modal-active').value = u.is_active ? 'true' : 'false';
+  document.getElementById('hwid-group').style.display = 'block';
+  document.getElementById('modal-hwid-text').textContent = u.hwid || 'Not Bound';
+  document.getElementById('modal-reset-hwid-flag').value = 'false';
+  openModal('modal-user');
+}
+
+function resetUserHwidFromModal() {
+  document.getElementById('modal-reset-hwid-flag').value = 'true';
+  document.getElementById('modal-hwid-text').textContent = 'Will be reset on save';
+  showToast('HWID reset flagged. Click Save User to apply.', 'info');
+}
+
+async function saveUser() {
+  const id = document.getElementById('edit-user-id').value;
+  const username = document.getElementById('modal-username').value.trim();
+  const password = document.getElementById('modal-password').value;
+  const durationType = document.getElementById('modal-duration-type').value;
+  const customDate = document.getElementById('modal-custom-duration').value;
+  const isActive = document.getElementById('modal-active').value === 'true';
+  const resetHwid = document.getElementById('modal-reset-hwid-flag').value === 'true';
+
+  if (!username) { showToast('Username is required.', 'warning'); return; }
+  if (!id && !password) { showToast('Password is required for new user.', 'warning'); return; }
+
+  const btn = document.getElementById('save-user-btn');
+  btn.disabled = true; btn.textContent = '⏳ Saving…';
+
+  const payload = {
+    username,
+    password: password || undefined,
+    duration_type: durationType,
+    custom_duration: customDate,
+    is_active: isActive,
+    reset_hwid: resetHwid
+  };
+
+  try {
+    let res;
+    if (id) res = await apiPut(`/admin/api/users/${id}`, payload);
+    else     res = await apiPost('{{ url_for("admin_create_user") }}', payload);
+
+    if (res.success) {
+      showToast(res.message, 'success');
+      closeModal('modal-user');
+      loadUsers();
+    } else {
+      showToast(res.message, 'error');
+    }
+  } catch(e) { showToast('Network error', 'error'); }
+  finally { btn.disabled = false; btn.textContent = '💾 Save User'; }
+}
+
+function confirmDeleteUser(id, username) {
+  document.getElementById('delete-msg').textContent = `Delete app user "${username}"?`;
+  document.getElementById('confirm-delete-btn').onclick = async () => {
+    const res = await apiDelete(`/admin/api/users/${id}`);
+    if (res.success) { showToast(res.message, 'success'); loadUsers(); }
+    else showToast(res.message, 'error');
+    closeModal('modal-delete');
+  };
+  openModal('modal-delete');
+}
+
+function toggleModalPwd() {
+  const i = document.getElementById('modal-password');
+  i.type = i.type === 'password' ? 'text' : 'password';
+}
+
+/* ═══════════════════════════ LICENSES (KeyAuth Style) ═══════════════════ */
+async function loadLicenses() {
+  try {
+    licensesData = await apiGet('{{ url_for("admin_list_licenses") }}');
+    renderLicenses(licensesData);
+  } catch(e) { showToast('Failed to load licenses', 'error'); }
+}
+
+function renderLicenses(lics) {
+  const tb = document.getElementById('licenses-tbody');
+  if (!lics.length) {
+    tb.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--text3);">No licenses generated yet. Click "🔑 Generate License" above!</td></tr>';
+    return;
+  }
+  tb.innerHTML = lics.map(l => `
+    <tr>
+      <td class="text-muted text-sm">#${l.id}</td>
+      <td>
+        <span class="key-mono">${esc(l.key)}</span>
+        <button style="background:none;border:none;cursor:pointer;font-size:13px;margin-left:4px;" onclick="copyText('${esc(l.key)}','License key copied!')" title="Copy">📋</button>
+      </td>
+      <td>
+        <span class="badge ${l.is_expired ? 'badge-danger' : (l.status === 'active' ? 'badge-active' : (l.status === 'used' ? 'badge-warning' : 'badge-inactive'))}">
+          ${esc(l.status)}
+        </span>
+      </td>
+      <td>
+        <span class="key-mono" style="color:${l.is_expired ? 'var(--red)' : 'var(--cyan-light)'}">
+          ${esc(l.time_left)}
+        </span>
+      </td>
+      <td class="text-sm text-muted">${esc(l.expires_at)}</td>
+      <td><span class="text-xs ${l.hwid === 'Not Bound' ? 'text-muted' : 'key-mono'}">${esc(l.hwid)}</span></td>
+      <td>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-secondary btn-sm" onclick="openEditLicModal(${JSON.stringify(l).replace(/"/g,'&quot;')})">✏️ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteLic(${l.id},'${esc(l.key)}')">🗑</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function filterLicenses() {
+  const q = document.getElementById('lic-search').value.toLowerCase();
+  const f = document.getElementById('lic-filter').value;
+  renderLicenses(licensesData.filter(l => (l.key.toLowerCase().includes(q) || (l.hwid && l.hwid.toLowerCase().includes(q))) && (!f || l.status.toLowerCase() === f)));
+}
+
+function generateRandomKeyAuthString() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const seg = () => Array.from({length: 4}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  return `${seg()}-${seg()}-${seg()}`;
+}
+
+function setRandomLicenseKey() {
+  document.getElementById('modal-lic-key').value = generateRandomKeyAuthString();
+}
+
+function toggleLicCustomDuration() {
+  const val = document.getElementById('modal-lic-duration-type').value;
+  document.getElementById('lic-custom-duration-group').style.display = (val === 'custom_date') ? 'block' : 'none';
+}
+
+function openAddLicModal() {
+  document.getElementById('lic-modal-title').textContent = 'Generate License Key (Custom or Random)';
+  document.getElementById('edit-lic-id').value = '';
+  document.getElementById('modal-lic-key').value = generateRandomKeyAuthString();
+  document.getElementById('modal-lic-duration-type').value = '30d';
+  document.getElementById('lic-custom-duration-group').style.display = 'none';
+  document.getElementById('lic-status-group').style.display = 'none';
+  document.getElementById('lic-hwid-group').style.display = 'none';
+  document.getElementById('modal-lic-reset-hwid-flag').value = 'false';
+  openModal('modal-license');
+}
+
+function openEditLicModal(l) {
+  document.getElementById('lic-modal-title').textContent = 'Edit License Key';
+  document.getElementById('edit-lic-id').value = l.id;
+  document.getElementById('modal-lic-key').value = l.key;
+  document.getElementById('modal-lic-duration-type').value = '30d';
+  document.getElementById('lic-custom-duration-group').style.display = 'none';
+  document.getElementById('lic-status-group').style.display = 'block';
+  document.getElementById('modal-lic-status').value = l.status.toLowerCase();
+  document.getElementById('lic-hwid-group').style.display = 'block';
+  document.getElementById('modal-lic-hwid-text').textContent = l.hwid || 'Not Bound';
+  document.getElementById('modal-lic-reset-hwid-flag').value = 'false';
+  openModal('modal-license');
+}
+
+function resetLicHwidFromModal() {
+  document.getElementById('modal-lic-reset-hwid-flag').value = 'true';
+  document.getElementById('modal-lic-hwid-text').textContent = 'Will be reset on save';
+  showToast('License HWID reset flagged. Click Save to apply.', 'info');
+}
+
+async function saveLicense() {
+  const id = document.getElementById('edit-lic-id').value;
+  const key = document.getElementById('modal-lic-key').value.trim();
+  const durationType = document.getElementById('modal-lic-duration-type').value;
+  const customDate = document.getElementById('modal-lic-custom-duration').value;
+  const status = document.getElementById('modal-lic-status').value || 'active';
+  const resetHwid = document.getElementById('modal-lic-reset-hwid-flag').value === 'true';
+
+  if (!key) { showToast('License key name is required.', 'warning'); return; }
+
+  const btn = document.getElementById('save-lic-btn');
+  btn.disabled = true; btn.textContent = '⏳ Saving…';
+
+  const payload = {
+    custom_key: key,
+    key: key,
+    duration_type: durationType,
+    custom_duration: customDate,
+    status: status,
+    reset_hwid: resetHwid
+  };
+
+  try {
+    let res;
+    if (id) res = await apiPut(`/admin/api/licenses/${id}`, payload);
+    else     res = await apiPost('{{ url_for("admin_create_license") }}', payload);
+
+    if (res.success) {
+      showToast(res.message, 'success');
+      closeModal('modal-license');
+      loadLicenses();
+    } else {
+      showToast(res.message, 'error');
+    }
+  } catch(e) { showToast('Network error', 'error'); }
+  finally { btn.disabled = false; btn.textContent = '💾 Save License'; }
+}
+
+function confirmDeleteLic(id, key) {
+  document.getElementById('delete-msg').textContent = `Delete license key "${key}"?`;
+  document.getElementById('confirm-delete-btn').onclick = async () => {
+    const res = await apiDelete(`/admin/api/licenses/${id}`);
+    if (res.success) { showToast(res.message, 'success'); loadLicenses(); }
+    else showToast(res.message, 'error');
+    closeModal('modal-delete');
+  };
+  openModal('modal-delete');
+}
+
+/* ═══════════════════════════ API DOCS ════════════════════════════════ */
+async function loadDocs() {
+  try {
+    const d = await apiGet('{{ url_for("admin_get_docs") }}');
+    document.getElementById('doc-title').value = d.title || '';
+    document.getElementById('doc-content').value = d.content || '';
+    if (d.updated_at) document.getElementById('docs-saved-at').textContent = `Last saved: ${d.updated_at}`;
+    livePreview();
+  } catch(e) { showToast('Failed to load docs', 'error'); }
+}
+
+function livePreview() {
+  const content = document.getElementById('doc-content').value;
+  document.getElementById('docs-preview').innerHTML = content ? marked.parse(content) : '<span class="text-muted text-sm">Preview will appear here…</span>';
+}
+
+async function saveDocs() {
+  const payload = {
+    title: document.getElementById('doc-title').value,
+    content: document.getElementById('doc-content').value
+  };
+  try {
+    const res = await apiPost('{{ url_for("admin_update_docs") }}', payload);
+    if (res.success) showToast(res.message, 'success');
+  } catch(e) { showToast('Network error', 'error'); }
+}
+
+/* ═══════════════════════════ RESET ═══════════════════════════════════ */
+async function loadResetUsers() {
+  try {
+    const users = await apiGet('{{ url_for("admin_users_list") }}');
+    const sel = document.getElementById('reset-user-select');
+    sel.innerHTML = '<option value="">— Choose a user account —</option>' +
+      users.map(u => `<option value="${u.id}">${esc(u.username)} (${esc(u.time_left)})</option>`).join('');
+  } catch(e) {}
+}
+
+function onResetUserChange() {
+  const sel = document.getElementById('reset-user-select');
+  const actions = document.getElementById('reset-actions');
+  const placeholder = document.getElementById('reset-placeholder');
+  if (sel.value) {
+    actions.style.display = 'grid';
+    placeholder.style.display = 'none';
+    const name = sel.options[sel.selectedIndex].text;
+    document.getElementById('selected-user-name').textContent = name;
+    document.getElementById('selected-user-badge').classList.remove('hidden');
+  } else {
+    actions.style.display = 'none';
+    placeholder.style.display = 'block';
+    document.getElementById('selected-user-badge').classList.add('hidden');
+  }
+}
+
+async function doReset(action) {
+  const uid = document.getElementById('reset-user-select').value;
+  if (!uid) { showToast('Please select a user first.', 'warning'); return; }
+  const payload = { user_id: parseInt(uid), action };
+  if (action === 'password') {
+    const p = document.getElementById('reset-pwd').value;
+    if (!p) { showToast('Please enter a password.', 'warning'); return; }
+    payload.new_password = p;
+  }
+  if (action === 'duration') {
+    payload.duration_type = document.getElementById('reset-duration-select').value;
+  }
+  try {
+    const res = await apiPost('{{ url_for("admin_reset_user") }}', payload);
+    if (res.success) {
+      document.getElementById('reset-result-body').innerHTML = `<div class="alert alert-success">${esc(res.message)}</div>`;
+      openModal('modal-reset-result');
+      if (action === 'password') document.getElementById('reset-pwd').value = '';
+      loadResetUsers();
+    } else {
+      showToast(res.message, 'error');
+    }
+  } catch(e) { showToast('Network error', 'error'); }
+}
+
+/* ═══════════════════════════ RESELLER MANAGEMENT ═════════════════════ */
+const RESELLERS_PER_PAGE = 3;
+let currentResellerPage = 1;
+let currentFilteredResellers = [];
+
+function toggleResellerPass() {
+  const inp = document.getElementById('new-reseller-pass');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+async function loadResellers() {
+  try {
+    resellersData = await apiGet('/admin/api/resellers');
+    renderResellers(resellersData, false);
+  } catch(e) {
+    showToast('Failed to load resellers', 'error');
+  }
+}
+
+function renderResellers(resellers, resetPage = false) {
+  currentFilteredResellers = resellers || [];
+  if (resetPage) {
+    currentResellerPage = 1;
+  }
+  renderCurrentResellerPage();
+}
+
+function renderCurrentResellerPage() {
+  const container = document.getElementById('resellers-list-container');
+  const countBadge = document.getElementById('reseller-count-badge');
+  const totalCount = currentFilteredResellers.length;
+  
+  if (countBadge) {
+    countBadge.textContent = `${totalCount} Reseller${totalCount === 1 ? '' : 's'}`;
+  }
+
+  if (!totalCount) {
+    container.innerHTML = '<div class="text-center text-muted" style="padding:40px 0;">No resellers found. Fill the form on the left to add one!</div>';
+    renderResellersPagination(0, 1);
+    return;
+  }
+
+  const totalPages = Math.ceil(totalCount / RESELLERS_PER_PAGE) || 1;
+  if (currentResellerPage > totalPages) currentResellerPage = totalPages;
+  if (currentResellerPage < 1) currentResellerPage = 1;
+
+  const startIndex = (currentResellerPage - 1) * RESELLERS_PER_PAGE;
+  const pageItems = currentFilteredResellers.slice(startIndex, startIndex + RESELLERS_PER_PAGE);
+
+  container.innerHTML = pageItems.map(r => {
+    const isPaused = r.is_paused;
+    const statusBadge = isPaused 
+      ? '<span class="badge badge-expired" style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);">⏸️ Paused</span>'
+      : '<span class="badge badge-active">🟢 Active</span>';
+    
+    const pauseBtnText = isPaused ? '▶️ Resume' : '⏸️ Pause';
+    const pauseBtnClass = isPaused ? 'btn-success' : 'btn-warning';
+
+    return `
+      <div class="card" style="padding:16px;background:rgba(255,255,255,0.02);border:1px solid ${isPaused ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.08)'};border-radius:10px;transition:all 0.2s ease;">
+        <div class="flex-between mb-10" style="flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#06b6d4);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;box-shadow:0 2px 10px rgba(124,58,237,0.3);">
+              ${esc(r.username.charAt(0).toUpperCase())}
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:15px;color:#fff;">${esc(r.username)}</div>
+              <div class="text-xs text-muted">${esc(r.panel_name)}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="badge" style="background:rgba(124,58,237,0.15);color:var(--purple-light);border:1px solid rgba(124,58,237,0.3);font-size:12px;font-weight:700;">
+              💎 ${r.credits} Credits
+            </span>
+            ${statusBadge}
+          </div>
+        </div>
+
+        <div class="flex-between text-xs text-muted mb-12" style="padding:8px 12px;background:rgba(0,0,0,0.25);border-radius:6px;">
+          <span>👥 <strong>${r.total_users}</strong> Users Created</span>
+          <span>🔑 <strong>${r.total_licenses}</strong> Licenses Created</span>
+          <span>📅 Added: ${esc(r.created_at)}</span>
+        </div>
+
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn ${pauseBtnClass} btn-sm" onclick="togglePauseReseller(${r.id})">
+            ${pauseBtnText}
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="openCreditsModal(${r.id}, '${esc(r.username)}')">
+            💳 +/- Credits
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="copyText('${esc(r.api_key)}', 'Reseller API Key copied!')">
+            🔑 Copy API Key
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="deleteReseller(${r.id}, '${esc(r.username)}')">
+            🗑 Delete
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  renderResellersPagination(totalCount, totalPages);
+}
+
+function renderResellersPagination(totalCount, totalPages) {
+  const pagContainer = document.getElementById('resellers-pagination-container');
+  if (!pagContainer) return;
+
+  if (totalCount === 0) {
+    pagContainer.innerHTML = '';
+    return;
+  }
+
+  const startIdx = (currentResellerPage - 1) * RESELLERS_PER_PAGE + 1;
+  const endIdx = Math.min(currentResellerPage * RESELLERS_PER_PAGE, totalCount);
+
+  let pageBtnsHtml = '';
+  let startPage = Math.max(1, currentResellerPage - 2);
+  let endPage = Math.min(totalPages, startPage + 4);
+  if (endPage - startPage < 4) {
+    startPage = Math.max(1, endPage - 4);
+  }
+
+  if (startPage > 1) {
+    pageBtnsHtml += `<button class="btn-page" onclick="gotoResellerPage(1)">1</button>`;
+    if (startPage > 2) pageBtnsHtml += `<span class="page-ellipsis">…</span>`;
+  }
+
+  for (let p = startPage; p <= endPage; p++) {
+    const isActive = p === currentResellerPage;
+    pageBtnsHtml += `
+      <button class="btn-page ${isActive ? 'active' : ''}" onclick="gotoResellerPage(${p})">
+        ${p}
+      </button>
+    `;
+  }
+
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) pageBtnsHtml += `<span class="page-ellipsis">…</span>`;
+    pageBtnsHtml += `<button class="btn-page" onclick="gotoResellerPage(${totalPages})">${totalPages}</button>`;
+  }
+
+  pagContainer.innerHTML = `
+    <div class="pagination-info">
+      Showing <strong>${startIdx}–${endIdx}</strong> of <strong>${totalCount}</strong> resellers • Page <strong style="color:var(--purple-light);">${currentResellerPage}</strong> / ${totalPages}
+    </div>
+    <div class="pagination-controls">
+      <button class="btn-page-nav" ${currentResellerPage <= 1 ? 'disabled' : ''} onclick="moveResellerPage(-1)" title="Previous Page">
+        ◀ Prev
+      </button>
+      <div style="display:flex;align-items:center;gap:4px;">
+        ${pageBtnsHtml}
+      </div>
+      <button class="btn-page-nav" ${currentResellerPage >= totalPages ? 'disabled' : ''} onclick="moveResellerPage(1)" title="Next Page">
+        Next ▶
+      </button>
+    </div>
+  `;
+}
+
+function gotoResellerPage(pageNum) {
+  currentResellerPage = pageNum;
+  renderCurrentResellerPage();
+  const card = document.getElementById('resellers-list-container');
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function moveResellerPage(delta) {
+  currentResellerPage += delta;
+  renderCurrentResellerPage();
+  const card = document.getElementById('resellers-list-container');
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function filterResellers() {
+  const q = document.getElementById('search-resellers').value.toLowerCase().trim();
+  const filtered = resellersData.filter(r => 
+    r.username.toLowerCase().includes(q) || (r.panel_name && r.panel_name.toLowerCase().includes(q))
+  );
+  renderResellers(filtered, true);
+}
+
+async function addNewReseller() {
+  const user = document.getElementById('new-reseller-user').value.trim();
+  const pass = document.getElementById('new-reseller-pass').value.trim();
+  const credits = parseInt(document.getElementById('new-reseller-credits').value) || 0;
+  const panel = document.getElementById('new-reseller-panel').value.trim();
+
+  if (!user) { showToast('Reseller username is required', 'warning'); return; }
+  if (!pass) { showToast('Reseller password is required', 'warning'); return; }
+
+  const btn = document.getElementById('add-reseller-btn');
+  btn.disabled = true; btn.textContent = '⏳ Creating…';
+
+  try {
+    const res = await apiPost('/admin/api/resellers', {
+      username: user,
+      password: pass,
+      credits: credits,
+      panel_name: panel
+    });
+
+    if (res.success) {
+      showToast(res.message, 'success');
+      document.getElementById('new-reseller-user').value = '';
+      document.getElementById('new-reseller-pass').value = '';
+      document.getElementById('new-reseller-credits').value = '100';
+      document.getElementById('new-reseller-panel').value = '';
+      loadResellers();
+      loadStats();
+    } else {
+      showToast(res.message, 'error');
+    }
+  } catch(e) {
+    showToast('Network error', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '➕ Add Reseller';
+  }
+}
+
+async function togglePauseReseller(rid) {
+  try {
+    const res = await apiPost(`/admin/api/resellers/${rid}/toggle-pause`, {});
+    if (res.success) {
+      showToast(res.message, 'success');
+      loadResellers();
+    } else {
+      showToast(res.message, 'error');
+    }
+  } catch(e) {
+    showToast('Network error', 'error');
+  }
+}
+
+function openCreditsModal(rid, name) {
+  document.getElementById('credit-reseller-id').value = rid;
+  document.getElementById('credit-reseller-name').textContent = name;
+  document.getElementById('credit-action').value = 'add';
+  document.getElementById('credit-amount').value = '50';
+  openModal('modal-credits');
+}
+
+async function saveCreditsAdjustment() {
+  const rid = document.getElementById('credit-reseller-id').value;
+  const action = document.getElementById('credit-action').value;
+  const amount = parseInt(document.getElementById('credit-amount').value) || 0;
+
+  if (amount <= 0) {
+    showToast('Please enter a valid credit amount', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('save-credits-btn');
+  btn.disabled = true; btn.textContent = '⏳ Saving…';
+
+  try {
+    const res = await apiPost(`/admin/api/resellers/${rid}/credits`, {
+      action: action,
+      amount: amount
+    });
+
+    if (res.success) {
+      showToast(res.message, 'success');
+      closeModal('modal-credits');
+      loadResellers();
+    } else {
+      showToast(res.message, 'error');
+    }
+  } catch(e) {
+    showToast('Network error', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '💳 Apply Credits';
+  }
+}
+
+function deleteReseller(rid, name) {
+  document.getElementById('delete-msg').textContent = `Delete reseller "${name}" and all users/keys created by this reseller?`;
+  document.getElementById('confirm-delete-btn').onclick = async () => {
+    try {
+      const res = await apiDelete(`/admin/api/resellers/${rid}`);
+      if (res.success) {
+        showToast(res.message, 'success');
+        loadResellers();
+        loadStats();
+      } else {
+        showToast(res.message, 'error');
+      }
+    } catch(e) {
+      showToast('Network error', 'error');
+    }
+    closeModal('modal-delete');
+  };
+  openModal('modal-delete');
+}
+
+/* ─── Init ──────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  loadStats();
+});
+</script>
+</body>
+</html>

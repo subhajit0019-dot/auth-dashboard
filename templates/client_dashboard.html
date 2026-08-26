@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Client Dashboard — AuthSystem</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <!-- Marked.js for markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<div class="dashboard-layout">
+
+  <!-- ══════════════════════ SIDEBAR ══════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🔐</div>
+      <div class="logo-text">
+        AuthSystem
+        <div class="logo-sub">Client Portal</div>
+      </div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar">{{ user.username[0]|upper }}</div>
+      <div class="user-info">
+        <div class="user-name">{{ user.username }}</div>
+        {% if user.role == 'reseller' %}
+          <span class="user-role badge-admin" style="font-size:10px;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.4);border-radius:99px;padding:1px 8px;color:var(--purple-light);font-weight:600;">👑 Reseller</span>
+          <div class="text-xs text-muted mt-2" style="font-size:11px;">💎 {{ user.credits or 0 }} Credits</div>
+        {% else %}
+          <span class="user-role">Client</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Navigation</div>
+      <div class="nav-item active" id="nav-overview" onclick="switchTab('overview')">
+        <span class="nav-icon">📊</span> Overview
+      </div>
+      <div class="nav-item" id="nav-profile" onclick="switchTab('profile')">
+        <span class="nav-icon">👤</span> User / Password
+      </div>
+      <div class="nav-item" id="nav-license" onclick="switchTab('license')">
+        <span class="nav-icon">🔑</span> License Key
+      </div>
+      <div class="nav-item" id="nav-api-docs" onclick="switchTab('api-docs')">
+        <span class="nav-icon">📖</span> API Docs
+      </div>
+      <div class="nav-item" id="nav-reset-link" onclick="switchTab('reset-link')">
+        <span class="nav-icon">🔗</span> Reset Link
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="{{ url_for('logout') }}" class="btn btn-danger btn-block" style="text-decoration:none;">
+        🚪 Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <!-- ══════════════════════ MAIN ══════════════════════════ -->
+  <main class="main-content">
+
+    <!-- ─── OVERVIEW ─────────────────────────────────────── -->
+    <section id="tab-overview" class="tab-section">
+      <div class="section-header">
+        <div class="section-title">Welcome back, {{ user.username }}! 👋</div>
+        <div class="section-sub">Here's a summary of your account</div>
+      </div>
+
+      <!-- Banner card -->
+      <div class="card mb-24" style="background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(6,182,212,0.1));border-color:rgba(124,58,237,0.3);">
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+          <div style="font-size:52px;">🛡️</div>
+          <div>
+            <div style="font-size:20px;font-weight:700;">Your account is active</div>
+            <div style="color:var(--text2);margin-top:4px;">All systems operational. Your license and credentials are managed by your administrator.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card purple">
+          <div class="stat-icon">⏱️</div>
+          <div class="stat-value" style="font-size:20px;color:var(--cyan-light);">
+            {{ user.time_left }}
+          </div>
+          <div class="stat-label">Subscription Time Left</div>
+        </div>
+        <div class="stat-card cyan">
+          <div class="stat-icon">📅</div>
+          <div class="stat-value" style="font-size:18px;">
+            {% if user.expires_at %}
+              {{ user.expires_at.strftime('%b %d, %Y') }}
+            {% else %}
+              Lifetime
+            {% endif %}
+          </div>
+          <div class="stat-label">Subscription Expires</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">👤</div>
+          <div class="stat-value" style="font-size:18px;">{{ user.username }}</div>
+          <div class="stat-label">App Username</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-icon">💻</div>
+          <div class="stat-value" style="font-size:14px;word-break:break-all;">
+            {{ user.hwid or 'Not Bound Yet' }}
+          </div>
+          <div class="stat-label">HWID Hardware Lock</div>
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="card mt-24">
+        <div class="card-title"><span>⚡</span> Quick Actions</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="switchTab('profile')">🔒 Change Password</button>
+          <button class="btn btn-secondary" onclick="switchTab('license')">🔑 View License Key</button>
+          <button class="btn btn-secondary" onclick="switchTab('api-docs')">📖 API Documentation</button>
+          <button class="btn btn-secondary" onclick="switchTab('reset-link')">🔗 Generate Reset Link</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── PROFILE / USER-PASSWORD ──────────────────────── -->
+    <section id="tab-profile" class="tab-section hidden">
+      <div class="section-header">
+        <div class="section-title">User / Password</div>
+        <div class="section-sub">Manage your login credentials</div>
+      </div>
+
+      <div class="grid-2" style="gap:24px;">
+
+        <!-- Profile info -->
+        <div class="card">
+          <div class="card-title"><span>👤</span> Account Info</div>
+          <div style="margin-bottom:12px;">
+            <div class="form-label">Username</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="key-mono" style="font-size:16px;padding:10px 16px;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);color:var(--purple-light);">
+                {{ user.username }}
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="copyText('{{ user.username }}', 'Username copied!')">📋</button>
+            </div>
+          </div>
+          <div class="section-divider"></div>
+          <div class="flex-gap">
+            <span>Status</span>
+            <span class="badge badge-active">Active</span>
+          </div>
+          <div class="flex-gap mt-8">
+            <span class="text-2 text-sm">Member since</span>
+            <span class="text-sm fw-600">{{ user.created_at.strftime('%B %d, %Y') }}</span>
+          </div>
+        </div>
+
+        <!-- Change password -->
+        <div class="card">
+          <div class="card-title"><span>🔒</span> Change Password</div>
+          <form id="change-pwd-form">
+            <div class="form-group">
+              <label class="form-label" for="cur-pwd">Current Password</label>
+              <div class="input-group">
+                <input id="cur-pwd" class="form-control" type="password" placeholder="••••••••" required/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="new-pwd">New Password</label>
+              <input id="new-pwd" class="form-control" type="password" placeholder="Min 8 characters" required oninput="checkStrength(this.value)"/>
+              <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+              <div class="strength-label" id="strength-label">Enter a new password</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="conf-pwd">Confirm New Password</label>
+              <input id="conf-pwd" class="form-control" type="password" placeholder="Repeat password" required/>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">🔐 Update Password</button>
+          </form>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ─── LICENSE KEY ──────────────────────────────────── -->
+    <section id="tab-license" class="tab-section hidden">
+      <div class="section-header">
+        <div class="section-title">License Key</div>
+        <div class="section-sub">Your software license information</div>
+      </div>
+
+      {% if license_key %}
+      <!-- Key display card -->
+      <div class="card mb-24">
+        <div class="card-title"><span>🔑</span> Your License Key</div>
+        <div class="license-display" id="lic-display">
+          <span id="lic-key-text" class="license-blurred">{{ license_key.key }}</span>
+          <div class="license-actions">
+            <button class="btn btn-secondary btn-sm" onclick="toggleLicBlur()" id="lic-reveal-btn">👁 Reveal</button>
+            <button class="btn btn-primary btn-sm" onclick="copyText('{{ license_key.key }}', 'License key copied!')">📋 Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- License details -->
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title"><span>📋</span> License Details</div>
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="flex-between">
+              <span class="text-2">Status</span>
+              <span class="badge badge-{{ license_key.status }}">{{ license_key.status.title() }}</span>
+            </div>
+            <div class="flex-between">
+              <span class="text-2">Created</span>
+              <span class="fw-600">{{ license_key.created_at.strftime('%Y-%m-%d') }}</span>
+            </div>
+            <div class="flex-between">
+              <span class="text-2">Expires</span>
+              <span class="fw-600">
+                {% if license_key.expires_at %}{{ license_key.expires_at.strftime('%Y-%m-%d') }}
+                {% else %}Never{% endif %}
+              </span>
+            </div>
+            {% if license_key.notes %}
+            <div class="flex-between">
+              <span class="text-2">Notes</span>
+              <span class="fw-600 text-sm">{{ license_key.notes }}</span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span>ℹ️</span> Usage Info</div>
+          <div class="alert alert-info" style="margin-bottom:12px;">
+            Include your license key in all API requests via the <code>X-License-Key</code> header.
+          </div>
+          <div class="alert alert-warning">
+            Keep your license key confidential. Contact your admin if you believe it has been compromised.
+          </div>
+        </div>
+      </div>
+
+      {% else %}
+      <!-- No license -->
+      <div class="card" style="text-align:center;padding:60px 24px;">
+        <div style="font-size:64px;margin-bottom:16px;">🔑</div>
+        <div style="font-size:20px;font-weight:700;margin-bottom:8px;">No License Assigned</div>
+        <div class="text-2">Your administrator has not yet assigned a license key to your account. Please contact your admin.</div>
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- ─── API DOCS (Reseller / Bot Integration) ────────── -->
+    <section id="tab-api-docs" class="tab-section hidden">
+      <div class="section-header">
+        <div class="section-title">API Documentation</div>
+        <div class="section-sub">Integrate bot & remote key/user management</div>
+      </div>
+
+      <!-- Card 1: Your API Access Key (Matches Screenshot) -->
+      <div class="card mb-24">
+        <div class="card-title" style="font-size:16px;font-weight:700;margin-bottom:12px;">Your API Access Key</div>
+        <div class="form-group mb-8">
+          <label class="form-label" style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">API Key</label>
+          <div class="flex-gap">
+            <input class="form-control key-mono" id="client-api-key-input" value="{{ user.api_key }}" readonly style="flex:1;background:rgba(255,255,255,0.03);color:#e4e4e7;letter-spacing:1px;font-size:13px;border-radius:8px;"/>
+            <button type="button" class="btn btn-secondary" style="border-radius:8px;padding:0 20px;" onclick="copyText(document.getElementById('client-api-key-input').value, 'API Key copied to clipboard!')">Copy</button>
+          </div>
+          <div class="text-xs text-muted mt-8">Use this key to authorize requests to the external API endpoints. Keep it confidential.</div>
+        </div>
+        <div style="margin-top:16px;">
+          <button type="button" class="btn btn-secondary" id="reset-key-btn" style="background:#09090b;color:#f4f4f5;border:1px solid #27272a;border-radius:8px;font-size:13px;padding:8px 16px;" onclick="resetMyApiKey()">
+            🔄 Reset API Key
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 2: Remote API Documentation Guide -->
+      <div class="card mb-24">
+        <div class="card-title" style="font-size:16px;font-weight:700;margin-bottom:6px;">API Documentation</div>
+        <div class="text-sm text-muted mb-16">
+          Integrate our high-performance authentication & key generation API into your own client / Telegram / Discord bot code.
+        </div>
+
+        <div style="font-size:14px;font-weight:600;margin-bottom:8px;color:#fff;">API Endpoint &amp; Action Guide</div>
+
+        <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:#a1a1aa;margin-bottom:20px;">
+          <span style="color:#38bdf8;">GET / POST</span> {{ base_url }}/api/v1/manage<br/>
+          <span style="color:#38bdf8;">GET / POST</span> {{ base_url }}/api/v1/manage?key=&lt;action&gt;&amp;...<br/><br/>
+          <span style="color:#f4f4f5;">Parameters:</span><br/>
+          - <span style="color:#a78bfa;">key</span>: Your API Key (e.g. <span style="color:#e4e4e7;" id="doc-key-preview">{{ user.api_key }}</span>)<br/>
+          - <span style="color:#a78bfa;">action</span>: <span style="color:#34d399;">'add'</span>, <span style="color:#34d399;">'add_license'</span>, <span style="color:#34d399;">'reset_hwid'</span>, <span style="color:#34d399;">'update'</span>, <span style="color:#34d399;">'status'</span>, <span style="color:#34d399;">'remove'</span><br/>
+          - <span style="color:#a78bfa;">username</span> / <span style="color:#a78bfa;">uid</span>: App username (1-char to unlimited letters)<br/>
+          - <span style="color:#a78bfa;">password</span>: App password (1-char to unlimited letters)<br/>
+          - <span style="color:#a78bfa;">license_key</span>: (Optional) Custom license string or auto-generated<br/>
+          - <span style="color:#a78bfa;">duration</span>: Number of days (1-365, required for 'add' or 'update')
+        </div>
+
+        <div class="card-title" style="font-size:14px;font-weight:600;margin-bottom:12px;">Interactive Endpoint Examples</div>
+        
+        <!-- Action 1 -->
+        <div style="margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;">
+          <div class="text-sm fw-600 mb-6" style="color:var(--green);">1. Add App User (Telegram Bot / Script)</div>
+          <div class="reset-link-box" style="font-size:12px;margin-bottom:6px;">
+            <span>🌐</span>
+            <span id="url-add-user">{{ base_url }}/api/v1/manage?key={{ user.api_key }}&action=add&username=Shubhajit&password=1&duration=30</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="copyText(document.getElementById('url-add-user').textContent, 'URL copied!')">📋 Copy URL</button>
+        </div>
+
+        <!-- Action 2 -->
+        <div style="margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;">
+          <div class="text-sm fw-600 mb-6" style="color:var(--cyan-light);">2. Generate License Key</div>
+          <div class="reset-link-box" style="font-size:12px;margin-bottom:6px;">
+            <span>🌐</span>
+            <span id="url-add-lic">{{ base_url }}/api/v1/manage?key={{ user.api_key }}&action=add_license&duration=30</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="copyText(document.getElementById('url-add-lic').textContent, 'URL copied!')">📋 Copy URL</button>
+        </div>
+
+        <!-- Action 3 -->
+        <div style="margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;">
+          <div class="text-sm fw-600 mb-6" style="color:var(--yellow);">3. Reset User HWID Lock &amp; Activation</div>
+          <div class="reset-link-box" style="font-size:12px;margin-bottom:6px;">
+            <span>🌐</span>
+            <span id="url-reset-hwid">{{ base_url }}/api/v1/manage?key={{ user.api_key }}&action=reset_hwid&username=Shubhajit</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="copyText(document.getElementById('url-reset-hwid').textContent, 'URL copied!')">📋 Copy URL</button>
+        </div>
+
+        <!-- Action 4 -->
+        <div>
+          <div class="text-sm fw-600 mb-6" style="color:var(--purple-light);">4. Check User Subscription Status &amp; Time Left</div>
+          <div class="reset-link-box" style="font-size:12px;margin-bottom:6px;">
+            <span>🌐</span>
+            <span id="url-status">{{ base_url }}/api/v1/manage?key={{ user.api_key }}&action=status&username=Shubhajit</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="copyText(document.getElementById('url-status').textContent, 'URL copied!')">📋 Copy URL</button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ─── RESET LINK ────────────────────────────────────── -->
+    <section id="tab-reset-link" class="tab-section hidden">
+      <div class="section-header">
+        <div class="section-title">Reset Link</div>
+        <div class="section-sub">Generate a one-time secure login link</div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title"><span>🔗</span> Generate Reset Link</div>
+          <div class="alert alert-info mb-16">
+            A reset link allows you to log in instantly without your password. It expires in <strong>24 hours</strong> and is valid for one use only.
+          </div>
+          <div class="alert alert-warning mb-16">
+            Generating a new link will invalidate any existing reset links.
+          </div>
+          <button class="btn btn-primary btn-block" id="gen-reset-btn" onclick="generateResetLink()">
+            🔗 Generate New Reset Link
+          </button>
+        </div>
+
+        <div class="card" id="reset-result-card">
+          <div class="card-title"><span>📋</span> Active Reset Link</div>
+          {% if active_token %}
+            <div class="alert alert-success mb-16">
+              ✓ You have an active reset link. It expires on <strong>{{ active_token.expires_at.strftime('%Y-%m-%d %H:%M UTC') }}</strong>
+            </div>
+            <div class="reset-link-box" id="reset-link-display">
+              <span>🔗</span>
+              <span id="reset-url-text">{{ url_for('use_reset_token', token=active_token.token, _external=True) }}</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <button class="btn btn-secondary btn-sm" onclick="copyText(document.getElementById('reset-url-text').textContent, 'Reset link copied!')">📋 Copy Link</button>
+            </div>
+          {% else %}
+            <div style="text-align:center;padding:30px 16px;">
+              <div style="font-size:40px;margin-bottom:12px;">🔗</div>
+              <div class="text-2 text-sm">No active reset link. Generate one using the button.</div>
+            </div>
+          {% endif %}
+          <div id="new-reset-display" class="hidden">
+            <div class="alert alert-success mb-16" id="new-reset-alert"></div>
+            <div class="reset-link-box">
+              <span>🔗</span>
+              <span id="new-reset-url" style="word-break:break-all;"></span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <button class="btn btn-secondary btn-sm" onclick="copyText(document.getElementById('new-reset-url').textContent, 'Reset link copied!')">📋 Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* ═══════════════════════════ TAB SWITCHING ════════════════════════════ */
+function switchTab(name) {
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.remove('hidden');
+  document.getElementById('nav-' + name).classList.add('active');
+}
+
+/* ═══════════════════════════ TOAST ════════════════════════════════════ */
+function showToast(msg, type = 'success') {
+  const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span class="toast-icon">${icons[type]}</span><span class="toast-msg">${msg}</span><span class="toast-close" onclick="this.parentElement.remove()">✕</span>`;
+  c.appendChild(t);
+  setTimeout(() => { if (t.parentElement) t.remove(); }, 4000);
+}
+
+/* ═══════════════════════════ COPY ══════════════════════════════════════ */
+function copyText(text, successMsg = 'Copied!') {
+  navigator.clipboard.writeText(text)
+    .then(() => showToast(successMsg, 'success'))
+    .catch(() => showToast('Copy failed', 'error'));
+}
+
+/* ═══════════════════════════ LICENSE BLUR ═════════════════════════════ */
+function toggleLicBlur() {
+  const el = document.getElementById('lic-key-text');
+  const btn = document.getElementById('lic-reveal-btn');
+  el.classList.toggle('license-blurred');
+  btn.textContent = el.classList.contains('license-blurred') ? '👁 Reveal' : '🙈 Hide';
+}
+
+/* ═══════════════════════════ PASSWORD STRENGTH ═════════════════════════ */
+function checkStrength(pwd) {
+  const fill = document.getElementById('strength-fill');
+  const label = document.getElementById('strength-label');
+  let score = 0;
+  if (pwd.length >= 8)  score++;
+  if (pwd.length >= 12) score++;
+  if (/[A-Z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+  const levels = [
+    { pct:0, col:'', text:'Enter a new password' },
+    { pct:20, col:'#ef4444', text:'Very weak' },
+    { pct:40, col:'#f97316', text:'Weak' },
+    { pct:60, col:'#f59e0b', text:'Fair' },
+    { pct:80, col:'#10b981', text:'Strong' },
+    { pct:100, col:'#06b6d4', text:'Very strong! 🎉' }
+  ];
+  const lv = levels[score] || levels[0];
+  fill.style.width = lv.pct + '%';
+  fill.style.background = lv.col;
+  label.textContent = lv.text;
+  label.style.color = lv.col || 'var(--text3)';
+}
+
+/* ═══════════════════════════ CHANGE PASSWORD ══════════════════════════ */
+document.getElementById('change-pwd-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = this.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = '⏳ Saving…';
+  try {
+    const res = await fetch('{{ url_for("client_change_password") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        current_password: document.getElementById('cur-pwd').value,
+        new_password:     document.getElementById('new-pwd').value,
+        confirm_password: document.getElementById('conf-pwd').value
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, 'success');
+      this.reset();
+      document.getElementById('strength-fill').style.width = '0';
+      document.getElementById('strength-label').textContent = 'Enter a new password';
+    } else {
+      showToast(data.message, 'error');
+    }
+  } catch(err) {
+    showToast('Network error. Please try again.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '🔐 Update Password';
+  }
+});
+
+/* ═══════════════════════════ RESET API KEY ═══════════════════════════ */
+async function resetMyApiKey() {
+  const btn = document.getElementById('reset-key-btn');
+  btn.disabled = true; btn.textContent = '⏳ Regenerating…';
+  try {
+    const res = await fetch('{{ url_for("client_reset_api_key") }}', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('client-api-key-input').value = data.api_key;
+      document.getElementById('doc-key-preview').textContent = data.api_key;
+      
+      const base = '{{ base_url }}';
+      document.getElementById('url-add-user').textContent = `${base}/api/v1/manage?key=${data.api_key}&action=add&username=Shubhajit&password=1&duration=30`;
+      document.getElementById('url-add-lic').textContent = `${base}/api/v1/manage?key=${data.api_key}&action=add_license&duration=30`;
+      document.getElementById('url-reset-hwid').textContent = `${base}/api/v1/manage?key=${data.api_key}&action=reset_hwid&username=Shubhajit`;
+      document.getElementById('url-status').textContent = `${base}/api/v1/manage?key=${data.api_key}&action=status&username=Shubhajit`;
+      
+      showToast('API Key regenerated successfully!', 'success');
+    } else {
+      showToast('Failed to regenerate key', 'error');
+    }
+  } catch(e) {
+    showToast('Network error', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '🔄 Reset API Key';
+  }
+}
+
+/* ═══════════════════════════ RESET LINK ═══════════════════════════════ */
+async function generateResetLink() {
+  const btn = document.getElementById('gen-reset-btn');
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+  try {
+    const res = await fetch('{{ url_for("client_generate_reset_token") }}', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      const disp = document.getElementById('new-reset-display');
+      document.getElementById('new-reset-url').textContent = data.reset_url;
+      document.getElementById('new-reset-alert').innerHTML = `✓ New reset link generated! Expires: <strong>${data.expires}</strong>`;
+      disp.classList.remove('hidden');
+      showToast('Reset link generated!', 'success');
+    } else {
+      showToast(data.message || 'Failed to generate link', 'error');
+    }
+  } catch(err) {
+    showToast('Network error. Please try again.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '🔗 Generate New Reset Link';
+  }
+}
+</script>
+</body>
+</html>

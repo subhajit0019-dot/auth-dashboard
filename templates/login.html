@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — AuthSystem</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --purple: #7c3aed; --purple-l: #a78bfa;
+      --cyan: #06b6d4; --cyan-l: #67e8f9;
+      --green: #10b981; --red: #ef4444;
+      --bg: #07080f; --bg2: #0c0e1a;
+      --card: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.08);
+      --input-bg: rgba(255,255,255,0.06);
+      --text: #f1f5f9; --text2: #94a3b8; --text3: #475569;
+      --grad: linear-gradient(135deg,#7c3aed,#06b6d4);
+    }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; overflow: hidden;
+    }
+
+    /* Animated background */
+    .bg-anim {
+      position: fixed; inset: 0; z-index: -1; overflow: hidden;
+    }
+    .bg-orb {
+      position: absolute; border-radius: 50%;
+      filter: blur(80px); opacity: 0.15;
+      animation: float 8s ease-in-out infinite;
+    }
+    .orb1 { width: 600px; height: 600px; background: var(--purple); top: -200px; left: -150px; animation-delay: 0s; }
+    .orb2 { width: 500px; height: 500px; background: var(--cyan); bottom: -150px; right: -100px; animation-delay: 3s; }
+    .orb3 { width: 400px; height: 400px; background: var(--purple); bottom: 30%; left: 30%; animation-delay: 6s; }
+    @keyframes float {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-30px) scale(1.05); }
+    }
+    .bg-grid {
+      position: fixed; inset: 0; z-index: -1;
+      background-image: linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* Login card */
+    .login-wrap {
+      width: 100%; max-width: 420px;
+      padding: 16px;
+      animation: slide-up 0.5s ease;
+    }
+    @keyframes slide-up {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .login-card {
+      background: rgba(12,14,26,0.9);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px 36px;
+      backdrop-filter: blur(30px);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset;
+    }
+
+    /* Header */
+    .login-logo {
+      text-align: center; margin-bottom: 30px;
+    }
+    .logo-icon-wrap {
+      width: 60px; height: 60px;
+      background: var(--grad);
+      border-radius: 16px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 28px; margin-bottom: 14px;
+      box-shadow: 0 8px 24px rgba(124,58,237,0.5);
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 8px 24px rgba(124,58,237,0.5); }
+      50%       { box-shadow: 0 8px 32px rgba(124,58,237,0.8); }
+    }
+    .login-title {
+      font-size: 22px; font-weight: 800;
+      background: var(--grad);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .login-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+    /* Flash messages */
+    .flash-msg {
+      padding: 11px 15px;
+      border-radius: 9px;
+      font-size: 13px;
+      margin-bottom: 18px;
+      display: flex; align-items: center; gap: 9px;
+      animation: slide-up 0.3s ease;
+    }
+    .flash-error   { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; }
+    .flash-success { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); color: #6ee7b7; }
+    .flash-warning { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25); color: #fcd34d; }
+
+    /* Form */
+    .form-group { margin-bottom: 18px; }
+    .form-label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--text2); text-transform: uppercase;
+      letter-spacing: 0.6px; margin-bottom: 7px;
+    }
+    .input-wrap { position: relative; }
+    .input-icon-l {
+      position: absolute; left: 14px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--text3); font-size: 16px; pointer-events: none;
+    }
+    .form-control {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px 12px 42px;
+      color: var(--text);
+      font-size: 14px; font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-control:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.18);
+    }
+    .form-control::placeholder { color: var(--text3); }
+    .eye-toggle {
+      position: absolute; right: 14px; top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer; color: var(--text3);
+      font-size: 16px; transition: color 0.2s;
+      background: none; border: none; padding: 0;
+      display: flex; align-items: center;
+    }
+    .eye-toggle:hover { color: var(--text2); }
+
+    /* Remember */
+    .form-check {
+      display: flex; align-items: center; gap: 9px;
+      margin-bottom: 22px;
+    }
+    .form-check input[type="checkbox"] {
+      width: 16px; height: 16px; accent-color: var(--purple);
+      cursor: pointer;
+    }
+    .form-check label { font-size: 13px; color: var(--text2); cursor: pointer; }
+
+    /* Login button */
+    .btn-login {
+      width: 100%; padding: 13px;
+      background: var(--grad);
+      border: none; border-radius: 10px;
+      color: #fff; font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 18px rgba(124,58,237,0.4);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-login:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(124,58,237,0.6); }
+    .btn-login:active { transform: translateY(0); }
+    .btn-login .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .login-footer {
+      text-align: center; margin-top: 20px;
+      font-size: 12px; color: var(--text3);
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-anim">
+  <div class="bg-orb orb1"></div>
+  <div class="bg-orb orb2"></div>
+  <div class="bg-orb orb3"></div>
+</div>
+<div class="bg-grid"></div>
+
+<div class="login-wrap">
+  <div class="login-card">
+
+    <div class="login-logo">
+      <div class="logo-icon-wrap">🔐</div>
+      <div class="login-title">AuthSystem</div>
+      <div class="login-sub">Secure access portal</div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="flash-msg flash-{{ cat }}">
+          {% if cat == 'error' %}⚠{% elif cat == 'success' %}✓{% else %}ℹ{% endif %}
+          {{ msg }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <form id="login-form" method="POST" action="{{ url_for('login') }}">
+
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <div class="input-wrap">
+          <span class="input-icon-l">👤</span>
+          <input id="username" class="form-control" type="text" name="username"
+                 placeholder="Enter your username" autocomplete="username"
+                 required autofocus />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div class="input-wrap">
+          <span class="input-icon-l">🔑</span>
+          <input id="password" class="form-control" type="password" name="password"
+                 placeholder="Enter your password" autocomplete="current-password"
+                 required />
+          <button type="button" class="eye-toggle" id="eye-btn" onclick="togglePwd()">👁</button>
+        </div>
+      </div>
+
+      <div class="form-check">
+        <input type="checkbox" id="remember" name="remember" />
+        <label for="remember">Keep me signed in</label>
+      </div>
+
+      <button class="btn-login" type="submit" id="login-btn">
+        <span class="spinner" id="spinner"></span>
+        <span id="btn-text">Sign In</span>
+      </button>
+
+    </form>
+
+    <div class="login-footer">
+      Protected by AuthSystem &mdash; Admin-managed access only
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function togglePwd() {
+    const pwd = document.getElementById('password');
+    const btn = document.getElementById('eye-btn');
+    if (pwd.type === 'password') { pwd.type = 'text'; btn.textContent = '🙈'; }
+    else { pwd.type = 'password'; btn.textContent = '👁'; }
+  }
+
+  document.getElementById('login-form').addEventListener('submit', function() {
+    const btn = document.getElementById('login-btn');
+    document.getElementById('spinner').style.display = 'block';
+    document.getElementById('btn-text').textContent = 'Signing in…';
+    btn.disabled = true;
+  });
+</script>
+</body>
+</html>

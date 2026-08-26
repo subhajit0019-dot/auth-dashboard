@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ user.panel_name or 'Reseller Panel' }} — Reseller Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+
+<!-- Toast Notification Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ════════════════════════ MODALS ════════════════════════════════════════ -->
+
+<!-- Create/Edit App User Modal -->
+<div class="modal-overlay" id="modal-reseller-user">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <div class="modal-title" id="r-user-modal-title">Create App User (1 Credit)</div>
+      <button class="modal-close" onclick="closeModal('modal-reseller-user')">✕</button>
+    </div>
+    <input type="hidden" id="r-edit-user-id"/>
+    
+    <div class="form-group">
+      <label class="form-label">Username (1 char to unlimited)</label>
+      <input class="form-control" id="r-modal-username" placeholder="e.g. client1 or user_x" autocomplete="off"/>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label" id="r-pwd-label">Password (1 char to unlimited)</label>
+      <div class="input-group">
+        <input class="form-control" id="r-modal-password" type="password" placeholder="e.g. 1 or pass123" autocomplete="new-password"/>
+        <span class="input-icon" onclick="toggleRUserPwd()">👁</span>
+      </div>
+      <div class="text-xs text-muted mt-8" id="r-pwd-hint" style="display:none;">Leave blank to keep existing password</div>
+    </div>
+
+    <!-- Duration / Expiry Selection -->
+    <div class="form-group">
+      <label class="form-label">⏱️ Subscription Duration (Starts on 1st login)</label>
+      <select class="form-control" id="r-modal-duration-type" onchange="toggleRUserCustomDuration()">
+        <option value="1d">1 Day</option>
+        <option value="3d">3 Days</option>
+        <option value="7d">7 Days (1 Week)</option>
+        <option value="14d">14 Days (2 Weeks)</option>
+        <option value="30d" selected>30 Days (1 Month)</option>
+        <option value="60d">60 Days (2 Months)</option>
+        <option value="90d">90 Days (3 Months)</option>
+        <option value="180d">180 Days (6 Months)</option>
+        <option value="365d">365 Days (1 Year)</option>
+        <option value="lifetime">♾️ Lifetime</option>
+        <option value="custom_date">📅 Custom Expiration Date</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="r-custom-duration-group" style="display:none;">
+      <label class="form-label">Select Expiry Date</label>
+      <input class="form-control" id="r-modal-custom-duration" type="datetime-local"/>
+    </div>
+
+    <div class="form-group" id="r-user-hwid-group" style="display:none;">
+      <label class="form-label">HWID Binding</label>
+      <div class="flex-between">
+        <span class="key-mono text-sm" id="r-modal-hwid-text">Not Bound</span>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="resetRUserHwid()">🔄 Reset HWID Lock</button>
+      </div>
+      <input type="hidden" id="r-modal-reset-hwid-flag" value="false"/>
+    </div>
+
+    <div class="alert alert-info mt-16" id="r-credit-cost-note">
+      💳 Creating this user will deduct <strong>1 Credit</strong> from your balance (<span id="r-modal-current-credits">{{ user.credits }}</span> available).
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-reseller-user')">Cancel</button>
+      <button class="btn btn-primary" id="r-save-user-btn" onclick="saveResellerUser()">💾 Save User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create/Edit License Modal -->
+<div class="modal-overlay" id="modal-reseller-license">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <div class="modal-title" id="r-lic-modal-title">Generate License Key (1 Credit)</div>
+      <button class="modal-close" onclick="closeModal('modal-reseller-license')">✕</button>
+    </div>
+    <input type="hidden" id="r-edit-lic-id"/>
+
+    <div class="form-group">
+      <label class="form-label">License Key (Random or Custom String)</label>
+      <div class="flex-gap">
+        <input class="form-control key-mono" id="r-modal-lic-key" placeholder="XXXX-XXXX-XXXX" style="font-size:14px;letter-spacing:1px;"/>
+        <button type="button" class="btn btn-secondary" onclick="setResellerRandomKey()">🎲 Random</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">⏱️ Duration (Starts on 1st use)</label>
+      <select class="form-control" id="r-modal-lic-duration-type" onchange="toggleRLicCustomDuration()">
+        <option value="1d">1 Day</option>
+        <option value="3d">3 Days</option>
+        <option value="7d">7 Days (1 Week)</option>
+        <option value="14d">14 Days (2 Weeks)</option>
+        <option value="30d" selected>30 Days (1 Month)</option>
+        <option value="60d">60 Days (2 Months)</option>
+        <option value="90d">90 Days (3 Months)</option>
+        <option value="180d">180 Days (6 Months)</option>
+        <option value="365d">365 Days (1 Year)</option>
+        <option value="lifetime">♾️ Lifetime</option>
+        <option value="custom_date">📅 Custom Expiration Date</option>
+      </select>
+    </div>
+
+    <div class="form-group" id="r-lic-custom-duration-group" style="display:none;">
+      <label class="form-label">Select Expiry Date</label>
+      <input class="form-control" id="r-modal-lic-custom-duration" type="datetime-local"/>
+    </div>
+
+    <div class="form-group" id="r-lic-hwid-group" style="display:none;">
+      <label class="form-label">HWID Binding</label>
+      <div class="flex-between">
+        <span class="key-mono text-sm" id="r-modal-lic-hwid-text">Not Bound</span>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="resetRLicHwid()">🔄 Reset HWID Lock</button>
+      </div>
+      <input type="hidden" id="r-modal-lic-reset-hwid-flag" value="false"/>
+    </div>
+
+    <div class="alert alert-info mt-16" id="r-lic-cost-note">
+      💳 Generating this license will deduct <strong>1 Credit</strong> from your balance (<span id="r-lic-current-credits">{{ user.credits }}</span> available).
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-reseller-license')">Cancel</button>
+      <button class="btn btn-primary" id="r-save-lic-btn" onclick="saveResellerLicense()">🔑 Generate Key</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-overlay" id="modal-reseller-delete">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title">Confirm Delete</div>
+      <button class="modal-close" onclick="closeModal('modal-reseller-delete')">✕</button>
+    </div>
+    <div class="alert alert-error" style="margin-bottom:0;">
+      ⚠️ <span id="r-delete-msg">Are you sure you want to delete this record?</span>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-reseller-delete')">Cancel</button>
+      <button class="btn btn-danger" id="r-confirm-delete-btn">🗑 Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Result Modal -->
+<div class="modal-overlay" id="modal-reseller-reset-result">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <div class="modal-title">Action Completed</div>
+      <button class="modal-close" onclick="closeModal('modal-reseller-reset-result')">✕</button>
+    </div>
+    <div id="r-reset-result-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('modal-reseller-reset-result')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════ LAYOUT ═══════════════════════════════════════ -->
+<div class="dashboard-layout">
+
+  <!-- ══════════════════════ SIDEBAR ══════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">👑</div>
+      <div class="logo-text">
+        {{ user.panel_name or 'Reseller Panel' }}
+        <div class="logo-sub">Sub-Reseller Portal</div>
+      </div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" style="background:linear-gradient(135deg,#7c3aed,#06b6d4);">{{ user.username[0]|upper }}</div>
+      <div class="user-info">
+        <div class="user-name">{{ user.username }}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+          <span class="user-role badge-admin" style="font-size:10px;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.4);border-radius:99px;padding:1px 8px;color:var(--purple-light);font-weight:600;">Reseller</span>
+          <span class="badge" style="background:rgba(16,185,129,0.15);color:var(--green);font-size:10px;font-weight:700;">💎 <span id="sidebar-credits">{{ user.credits }}</span></span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main Menu</div>
+      <div class="nav-item active" id="nav-overview" onclick="switchTab('overview')">
+        <span class="nav-icon">📊</span> 1. Overview
+      </div>
+      <div class="nav-item" id="nav-users" onclick="switchTab('users')">
+        <span class="nav-icon">👥</span> 2. User / Pass
+      </div>
+      <div class="nav-item" id="nav-licenses" onclick="switchTab('licenses')">
+        <span class="nav-icon">🔑</span> 3. Licence Key
+      </div>
+      <div class="nav-item" id="nav-api-docs" onclick="switchTab('api-docs')">
+        <span class="nav-icon">📖</span> 4. API Docs
+      </div>
+      <div class="nav-item" id="nav-reset" onclick="switchTab('reset')">
+        <span class="nav-icon">🔄</span> 5. All User/Licence Reset Link
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="{{ url_for('logout') }}" class="btn btn-danger btn-block" style="text-decoration:none;">
+        🚪 Sign Out
+      </a>
+    </div>
+  </aside>
+
+  <!-- ══════════════════════ MAIN ══════════════════════════ -->
+  <main class="main-content">
+
+    <!-- ─── 1. OVERVIEW ──────────────────────────────────── -->
+    <section id="tab-overview" class="tab-section">
+      <div class="section-header">
+        <div class="section-title">{{ user.panel_name or 'Reseller Panel' }} Overview</div>
+        <div class="section-sub">Manage your client credentials, license keys, and credits</div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card purple">
+          <div class="stat-icon">💎</div>
+          <div class="stat-value" id="s-r-credits" style="color:var(--cyan-light);">{{ user.credits }}</div>
+          <div class="stat-label">Available Credits</div>
+        </div>
+        <div class="stat-card cyan">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="s-r-total-users">—</div>
+          <div class="stat-label">My App Users</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">🔑</div>
+          <div class="stat-value" id="s-r-total-lic">—</div>
+          <div class="stat-label">My License Keys</div>
+        </div>
+        <div class="stat-card yellow">
+          <div class="stat-icon">🟢</div>
+          <div class="stat-value" id="s-r-active-lic">—</div>
+          <div class="stat-label">Active Licenses</div>
+        </div>
+      </div>
+
+      <!-- Quick Actions Card -->
+      <div class="card mb-24">
+        <div class="card-title"><span>⚡</span> Quick Reseller Actions</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="openAddRUserModal()">➕ Create App User (1 Credit)</button>
+          <button class="btn btn-secondary" onclick="openAddRLicModal()">🔑 Generate License Key (1 Credit)</button>
+          <button class="btn btn-secondary" onclick="switchTab('api-docs')">📖 View My API Key &amp; Bot Docs</button>
+          <button class="btn btn-secondary" onclick="switchTab('reset')">🔄 Reset Client HWID / Pass</button>
+        </div>
+      </div>
+
+      <!-- Activity Logs -->
+      <div class="card">
+        <div class="card-title"><span>📋</span> Reseller Activity Logs</div>
+        <ul class="activity-list" id="r-activity-list">
+          <li class="activity-item"><div class="activity-dot"></div><div><div class="activity-text text-muted">Loading activity…</div></div></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ─── 2. USER / PASS ───────────────────────────────── -->
+    <section id="tab-users" class="tab-section hidden">
+      <div class="section-header">
+        <div class="section-title">App User / Password Management</div>
+        <div class="section-sub">Create and manage client app users. Time &amp; HWID activate on first EXE login.</div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="flex-gap" style="flex:1;max-width:400px;">
+            <input class="form-control" id="search-r-users" placeholder="🔍 Search username, status, HWID…" oninput="filterRUsers()"/>
+          </div>
+          <button class="btn btn-primary" onclick="openAddRUserModal()">
+            ➕ Create App User (1 Credit)
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>User Credentials</th>
+                <th>Subscription Time</th>
+                <th>Status</th>
+                <th>HWID (Hardware ID)</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="r-users-tbody">
+              <!-- Loaded via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── 3. LICENCE KEY ───────────────────────────────── -->
+    <section id="tab-licenses" class="tab-section hidden">
+      <div class="section-header">
+        <div class="section-title">License Key Management</div>
+        <div class="section-sub">Generate and manage license keys (KeyAuth format: XXXX-XXXX-XXXX).</div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="flex-gap" style="flex:1;max-width:400px;">
+            <input class="form-control" id="search-r-lic" placeholder="🔍 Search license key or status…" oninput="filterRLicenses()"/>
+          </div>
+          <button class="btn btn-primary" onclick="openAddRLicModal()">
+            🔑 Generate License Key (1 Credit)
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>License Key</th>
+                <th>Duration / Time Left</th>
+                <th>Status</th>
+                <th>HWID (Hardware Lock)</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="r-lic-tbody">
+              <!-- Loaded via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── 4. API DOCS ──────────────────────────────────── -->
+    <section id="tab-api-docs" class="tab-section hidden">
+      <div class="section-header">
+        <div class="section-title">API Documentation &amp; Bot Integration</div>
+        <div class="section-sub">Integrate your reseller key into Telegram bots, Discord bots, or websites</div>
+      </div>
+
+      <!-- Your API Access Key Card -->
+      <div class="card mb-24">
+        <div class="card-title" style="font-size:16px;font-weight:700;margin-bottom:12px;">Your API Access Key</div>
+        <div class="form-group mb-8">
+          <label class="form-label" style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">API Key</label>
+          <div class="flex-gap">
+            <input class="form-control key-mono" id="r-api-key-input" value="{{ user.api_key }}" readonly style="flex:1;background:rgba(255,255,255,0.03);color:#e4e4e7;letter-spacing:1px;font-size:13px;border-radius:8px;"/>
+            <button type="button" class="btn btn-secondary" style="border-radius:8px;padding:0 20px;" onclick="copyText(document.getElementById('r-api-key-input').value, 'API Key copied to clipboard!')">Copy</button>
+          </div>
+          <div class="text-xs text-muted mt-8">Use this key to authorize requests to the external API endpoints. Keep it confidential.</div>
+        </div>
+        <div style="margin-top:16px;">
+          <button type="button" class="btn btn-secondary" id="r-reset-key-btn" style="background:#09090b;color:#f4f4f5;border:1px solid #27272a;border-radius:8px;font-size:13px;padding:8px 16px;" onclick="resetResellerApiKey()">
+            🔄 Reset API Key
+          </button>
+        </div>
+      </div>
+
+      <!-- Remote API Documentation Guide -->
+      <div class="card mb-24">
+        <div class="card-title" style="font-size:16px;font-weight:700;margin-bottom:6px;">API Documentation</div>
+        <div class="text-sm text-muted mb-16">
+          Integrate our high-performance authentication &amp; key generation API into your own Telegram / Discord bot code.
+        </div>
+
+        <div style="font-size:14px;font-weight:600;margin-bottom:8px;color:#fff;">API Endpoint &amp; Action Guide</div>
+
+        <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:#a1a1aa;margin-bottom:20px;">
+          <span style="color:#38bdf8;">GET / POST</span> {{ base_url }}/api/v1/manage<br/>
+          <span style="color:#38bdf8;">GET / POST</span> {{ base_url }}/api/v1/manage?key=&lt;action&gt;&amp;...<br/><br/>
+          <span style="color:#f4f4f5;">Parameters:</span><br/>
+          - <span style="color:#a78bfa;">key</span>: Your API Key (e.g. <span style="color:#e4e4e7;" id="r-doc-key-preview">{{ user.api_key }}</span>)<br/>
+          - <span style="color:#a78bfa;">action</span>: <span style="color:#34d399;">'add'</span>, <span style="color:#34d399;">'add_license'</span>, <span style="color:#34d399;">'reset_hwid'</span>, <span style="color:#34d399;">'update'</span>, <span style="color:#34d399;">'status'</span>, <span style="color:#34d399;">'remove'</span><br/>
+          - <span style="color:#a78bfa;">username</span> / <span style="color:#a78bfa;">uid</span>: App username (1-char to unlimited letters)<br/>
+          - <span style="color:#a78bfa;">password</span>: App password (1-char to unlimited letters)<br/>
+          - <span style="color:#a78bfa;">license_key</span>: (Optional) Custom license string or auto-generated<br/>
+          - <span style="color:#a78bfa;">duration</span>: Number of days (1-365, required for 'add' or 'update')
+        </div>
+
+        <div class="card-title" style="font-size:14px;font-weight:600;margin-bottom:12px;">Live Endpoints Pre-filled With Your API Key</div>
+        
+        <!-- Action 1 -->
+        <div style="margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;">
+          <div class="text-sm fw-600 mb-6" style="color:var(--green);">1. Add App User (Telegram Bot / Script) — Cost: 1 Credit</div>
+          <div class="reset-link-box" style="font-size:12px;margin-bottom:6px;">
+            <span>🌐</span>
+            <span id="r-url-add-user">{{ base_url }}/api/v1/manage?key={{ user.api_key }}&action=add&username=Shubhajit&password=1&duration=30</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="copyText(document.getElementById('r-url-add-user').textContent, 'URL copied!')">📋 Copy URL</button>
+        </div>
+
+        <!-- Action 2 -->
+        <div style="margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;">
+          <div class="text-sm fw-600 mb-6" style="color:var(--cyan-light);">2. Generate License Key — Cost: 1 Credit</div>
+          <div class="reset-link-box" style="font-size:12px;margin-bottom:6px;">
+            <span>🌐</span>
+            <span id="r-url-add-lic">{{ base_url }}/api/v1/manage?key={{ user.api_key }}&action=add_license&duration=30</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="copyText(document.getElementById('r-url-add-lic').textContent, 'URL copied!')">📋 Copy URL</button>
+        </div>
+
+        <!-- Action 3 -->
+        <div style="margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;">
+          <div class="text-sm fw-600 mb-6" style="color:var(--yellow);">3. Reset User HWID Lock &amp; Activation (Free)</div>
+          <div class="reset-link-box" style="font-size:12px;margin-bottom:6px;">
+            <span>🌐</span>
+            <span id="r-url-reset-hwid">{{ base_url }}/api/v1/manage?key={{ user.api_key }}&action=reset_hwid&username=Shubhajit</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="copyText(document.getElementById('r-url-reset-hwid').textContent, 'URL copied!')">📋 Copy URL</button>
+        </div>
+
+        <!-- Action 4 -->
+        <div>
+          <div class="text-sm fw-600 mb-6" style="color:var(--purple-light);">4. Check User Subscription Status &amp; Time Left</div>
+          <div class="reset-link-box" style="font-size:12px;margin-bottom:6px;">
+            <span>🌐</span>
+            <span id="r-url-status">{{ base_url }}/api/v1/manage?key={{ user.api_key }}&action=status&username=Shubhajit</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="copyText(document.getElementById('r-url-status').textContent, 'URL copied!')">📋 Copy URL</button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ─── 5. ALL USER / LICENCE RESET LINK ─────────────── -->
+    <section id="tab-reset" class="tab-section hidden">
+      <div class="section-header">
+        <div class="section-title">5. Client Self-Service HWID Reset Portal</div>
+        <div class="section-sub">Share your public link with customers so they can reset their own HWID lock anytime</div>
+      </div>
+
+      <!-- Card 1: Your Public Reset Portal Link (For Customers) -->
+      <div class="card mb-24" style="background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(6,182,212,0.08));border:1px solid rgba(124,58,237,0.3);">
+        <div class="card-title" style="font-size:16px;font-weight:700;color:#fff;margin-bottom:8px;">
+          <span>🔗</span> Your Dedicated Client HWID Reset Portal Link
+        </div>
+        <div class="text-sm text-muted mb-16">
+          Send this link to your clients / buyers. When they open it in their browser, they only need to enter their <strong>App Username</strong> and their HWID lock will automatically reset!
+        </div>
+
+        <div class="form-group mb-12">
+          <label class="form-label" style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">Public Reset Portal URL</label>
+          <div class="reset-link-box" style="font-size:13px;padding:12px 16px;margin-bottom:12px;">
+            <span>🌐</span>
+            <span id="r-portal-url-display" style="word-break:break-all;font-weight:600;color:var(--cyan-light);">
+              {{ base_url }}/portal/reset/{{ user.reset_portal_token }}
+            </span>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="copyText(document.getElementById('r-portal-url-display').textContent.trim(), 'Public Reset Portal Link copied!')">
+              📋 Copy Public Reset Link
+            </button>
+            <a href="{{ base_url }}/portal/reset/{{ user.reset_portal_token }}" target="_blank" class="btn btn-secondary" style="text-decoration:none;">
+              👁️ Open Portal Preview
+            </a>
+            <button class="btn btn-secondary" id="r-regen-portal-btn" onclick="regeneratePortalToken()">
+              🔄 Regenerate Portal Token
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Manual Reseller User Management Override -->
+      <div class="section-title" style="font-size:18px;margin-bottom:12px;color:#fff;">Manual User Reset Override</div>
+
+      <!-- User selection -->
+      <div class="card mb-24">
+        <div class="card-title"><span>👤</span> Select Client User</div>
+        <div class="flex-gap" style="flex-wrap:wrap;">
+          <select class="form-control" id="r-reset-user-select" style="max-width:340px;" onchange="onRResetUserChange()">
+            <option value="">— Choose a user account —</option>
+          </select>
+          <div id="r-selected-user-badge" class="hidden">
+            <span class="badge badge-active" id="r-selected-user-name"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions Grid -->
+      <div class="grid-3" id="r-reset-actions" style="display:none;">
+
+        <!-- Reset Password -->
+        <div class="card">
+          <div class="card-title"><span>🔒</span> Reset Password</div>
+          <div class="form-group">
+            <label class="form-label">New Password (Any length)</label>
+            <input class="form-control" id="r-reset-pwd" type="password" placeholder="Enter new password"/>
+          </div>
+          <button class="btn btn-primary btn-block mt-16" onclick="doRReset('password')">🔒 Update Password</button>
+        </div>
+
+        <!-- Extend Duration -->
+        <div class="card">
+          <div class="card-title"><span>⏱️</span> Set Subscription Duration</div>
+          <div class="form-group">
+            <label class="form-label">Select Duration</label>
+            <select class="form-control" id="r-reset-duration-select">
+              <option value="1d">1 Day</option>
+              <option value="7d">7 Days</option>
+              <option value="30d" selected>30 Days</option>
+              <option value="90d">90 Days</option>
+              <option value="365d">365 Days</option>
+              <option value="lifetime">♾️ Lifetime</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-block mt-16" onclick="doRReset('duration')">⏱️ Update Duration</button>
+        </div>
+
+        <!-- Reset HWID -->
+        <div class="card">
+          <div class="card-title"><span>💻</span> Reset HWID Lock</div>
+          <div class="alert alert-info mb-16">
+            Clears hardware lock so user can login from a new PC.
+          </div>
+          <button class="btn btn-secondary btn-block mt-16" onclick="doRReset('hwid')">🔄 Clear HWID Lock</button>
+        </div>
+
+      </div>
+
+      <div id="r-reset-placeholder" class="card" style="text-align:center;padding:60px 24px;">
+        <div style="font-size:52px;margin-bottom:12px;">🔄</div>
+        <div style="font-size:17px;font-weight:600;margin-bottom:8px;">Select a Client User Above</div>
+        <div class="text-2">Choose a client user to manually update password, duration, or clear HWID lock.</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ════════════════════════ JAVASCRIPT ════════════════════════════════════ -->
+<script>
+/* ─── State ─────────────────────────────────────────────────────────── */
+let rUsersData = [];
+let rLicensesData = [];
+let currentCredits = {{ user.credits or 0 }};
+
+/* ─── Tab Switching ─────────────────────────────────────────────────── */
+function switchTab(name) {
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.add('hidden'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.remove('hidden');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'overview')  loadRStats();
+  if (name === 'users')     loadRUsers();
+  if (name === 'licenses')  loadRLicenses();
+  if (name === 'reset')     loadRResetUsers();
+}
+
+/* ─── Toast ─────────────────────────────────────────────────────────── */
+function showToast(msg, type = 'success') {
+  const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span class="toast-icon">${icons[type]||'ℹ️'}</span><span class="toast-msg">${msg}</span><span class="toast-close" onclick="this.parentElement.remove()">✕</span>`;
+  c.appendChild(t);
+  setTimeout(() => { if (t.parentElement) t.remove(); }, 5000);
+}
+
+/* ─── API Helpers ────────────────────────────────────────────────────── */
+async function apiGet(url) {
+  const r = await fetch(url);
+  return r.json();
+}
+async function apiPost(url, data) {
+  const r = await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  return r.json();
+}
+async function apiPut(url, data) {
+  const r = await fetch(url, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  return r.json();
+}
+async function apiDelete(url) {
+  const r = await fetch(url, { method: 'DELETE' });
+  return r.json();
+}
+
+/* ─── Modal helpers ──────────────────────────────────────────────────── */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+/* ─── Copy Text ─── */
+function copyText(text, successMsg = 'Copied!') {
+  if (!text) return;
+  navigator.clipboard.writeText(text)
+    .then(() => showToast(successMsg, 'success'))
+    .catch(() => showToast('Copy failed', 'error'));
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function updateCreditsUI(credits) {
+  currentCredits = credits;
+  document.getElementById('sidebar-credits').textContent = credits;
+  const sEl = document.getElementById('s-r-credits');
+  if (sEl) sEl.textContent = credits;
+  const m1 = document.getElementById('r-modal-current-credits');
+  if (m1) m1.textContent = credits;
+  const m2 = document.getElementById('r-lic-current-credits');
+  if (m2) m2.textContent = credits;
+}
+
+/* ═══════════════════════════ OVERVIEW ════════════════════════════════ */
+async function loadRStats() {
+  try {
+    const data = await apiGet('/reseller/api/stats');
+    if (data.credits !== undefined) updateCreditsUI(data.credits);
+    document.getElementById('s-r-total-users').textContent = data.total_users;
+    document.getElementById('s-r-total-lic').textContent = data.total_licenses;
+    document.getElementById('s-r-active-lic').textContent = data.active_licenses;
+
+    const list = document.getElementById('r-activity-list');
+    if (!data.activity || data.activity.length === 0) {
+      list.innerHTML = '<li class="activity-item"><div class="activity-dot"></div><div><div class="activity-text text-muted">No recent activity</div></div></li>';
+    } else {
+      list.innerHTML = data.activity.map(a => `
+        <li class="activity-item">
+          <div class="activity-dot"></div>
+          <div>
+            <div class="activity-text">${esc(a.action)}</div>
+            <div class="activity-time">${esc(a.timestamp)}</div>
+          </div>
+        </li>`).join('');
+    }
+  } catch(e) {}
+}
+
+/* ═══════════════════════════ USERS CRUD ═══════════════════════════════ */
+function toggleRUserPwd() {
+  const inp = document.getElementById('r-modal-password');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+async function loadRUsers() {
+  try {
+    rUsersData = await apiGet('/reseller/api/users');
+    renderRUsers(rUsersData);
+  } catch(e) { showToast('Failed to load users', 'error'); }
+}
+
+function renderRUsers(users) {
+  const tb = document.getElementById('r-users-tbody');
+  if (!users.length) {
+    tb.innerHTML = '<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--text3);">No app users created yet. Click "Create App User" above!</td></tr>';
+    return;
+  }
+  tb.innerHTML = users.map(u => `
+    <tr>
+      <td>
+        <div style="font-weight:700;color:#fff;">${esc(u.username)}</div>
+      </td>
+      <td>
+        <div class="fw-600" style="color:var(--cyan-light);font-size:13px;">${esc(u.time_left)}</div>
+        <div class="text-xs text-muted">Expires: ${esc(u.expires_at)}</div>
+      </td>
+      <td>
+        <span class="badge ${u.status_label === 'Active' ? 'badge-active' : (u.status_label === 'Expired' ? 'badge-danger' : 'badge-warning')}">
+          ${esc(u.status_label)}
+        </span>
+      </td>
+      <td>
+        <span class="key-mono" style="font-size:11px;">${esc(u.hwid)}</span>
+      </td>
+      <td class="text-sm text-muted">${esc(u.created_at)}</td>
+      <td>
+        <div class="action-btns">
+          <button class="btn btn-secondary btn-sm" onclick='openEditRUserModal(${JSON.stringify(u)})'>✏️ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteRUser(${u.id}, '${esc(u.username)}')">🗑</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterRUsers() {
+  const q = document.getElementById('search-r-users').value.toLowerCase().trim();
+  renderRUsers(rUsersData.filter(u => u.username.toLowerCase().includes(q) || (u.hwid && u.hwid.toLowerCase().includes(q)) || u.status_label.toLowerCase().includes(q)));
+}
+
+function toggleRUserCustomDuration() {
+  const val = document.getElementById('r-modal-duration-type').value;
+  document.getElementById('r-custom-duration-group').style.display = (val === 'custom_date') ? 'block' : 'none';
+}
+
+function openAddRUserModal() {
+  document.getElementById('r-user-modal-title').textContent = 'Create App User (1 Credit)';
+  document.getElementById('r-edit-user-id').value = '';
+  document.getElementById('r-modal-username').value = '';
+  document.getElementById('r-modal-username').disabled = false;
+  document.getElementById('r-modal-password').value = '';
+  document.getElementById('r-pwd-hint').style.display = 'none';
+  document.getElementById('r-modal-duration-type').value = '30d';
+  document.getElementById('r-custom-duration-group').style.display = 'none';
+  document.getElementById('r-modal-custom-duration').value = '';
+  document.getElementById('r-user-hwid-group').style.display = 'none';
+  document.getElementById('r-modal-reset-hwid-flag').value = 'false';
+  document.getElementById('r-credit-cost-note').style.display = 'block';
+  openModal('modal-reseller-user');
+}
+
+function openEditRUserModal(u) {
+  document.getElementById('r-user-modal-title').textContent = 'Edit App User';
+  document.getElementById('r-edit-user-id').value = u.id;
+  document.getElementById('r-modal-username').value = u.username;
+  document.getElementById('r-modal-username').disabled = true;
+  document.getElementById('r-modal-password').value = '';
+  document.getElementById('r-pwd-hint').style.display = 'block';
+  document.getElementById('r-modal-duration-type').value = '30d';
+  document.getElementById('r-custom-duration-group').style.display = 'none';
+  document.getElementById('r-modal-custom-duration').value = '';
+  document.getElementById('r-user-hwid-group').style.display = 'block';
+  document.getElementById('r-modal-hwid-text').textContent = u.hwid || 'Not Bound';
+  document.getElementById('r-modal-reset-hwid-flag').value = 'false';
+  document.getElementById('r-credit-cost-note').style.display = 'none';
+  openModal('modal-reseller-user');
+}
+
+function resetRUserHwid() {
+  document.getElementById('r-modal-reset-hwid-flag').value = 'true';
+  document.getElementById('r-modal-hwid-text').textContent = 'Will reset on save';
+  showToast('HWID reset flagged. Click Save to apply.', 'info');
+}
+
+async function saveResellerUser() {
+  const id = document.getElementById('r-edit-user-id').value;
+  const username = document.getElementById('r-modal-username').value.trim();
+  const password = document.getElementById('r-modal-password').value;
+  const durationType = document.getElementById('r-modal-duration-type').value;
+  const customDate = document.getElementById('r-modal-custom-duration').value;
+  const resetHwid = document.getElementById('r-modal-reset-hwid-flag').value === 'true';
+
+  if (!id && !username) { showToast('Username is required.', 'warning'); return; }
+  if (!id && !password) { showToast('Password is required.', 'warning'); return; }
+  if (durationType === 'custom_date' && !customDate) { showToast('Please select a custom expiry date.', 'warning'); return; }
+
+  const btn = document.getElementById('r-save-user-btn');
+  btn.disabled = true; btn.textContent = '⏳ Saving…';
+
+  const payload = { username, password, duration_type: durationType, custom_date: customDate, reset_hwid: resetHwid };
+
+  try {
+    let res;
+    if (id) res = await apiPut(`/reseller/api/users/${id}`, payload);
+    else     res = await apiPost('/reseller/api/users', payload);
+
+    if (res.success) {
+      showToast(res.message, 'success');
+      closeModal('modal-reseller-user');
+      if (res.credits !== undefined) updateCreditsUI(res.credits);
+      loadRUsers();
+      loadRStats();
+    } else {
+      showToast(res.message, 'error');
+    }
+  } catch(e) { showToast('Network error', 'error'); }
+  finally { btn.disabled = false; btn.textContent = '💾 Save User'; }
+}
+
+function confirmDeleteRUser(id, username) {
+  document.getElementById('r-delete-msg').textContent = `Delete app user "${username}"?`;
+  document.getElementById('r-confirm-delete-btn').onclick = async () => {
+    const res = await apiDelete(`/reseller/api/users/${id}`);
+    if (res.success) { showToast(res.message, 'success'); loadRUsers(); loadRStats(); }
+    else showToast(res.message, 'error');
+    closeModal('modal-reseller-delete');
+  };
+  openModal('modal-reseller-delete');
+}
+
+/* ═══════════════════════════ LICENSES CRUD ════════════════════════════ */
+function generateKeyAuthString() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const seg = () => Array.from({length: 4}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  return `${seg()}-${seg()}-${seg()}`;
+}
+
+function setResellerRandomKey() {
+  document.getElementById('r-modal-lic-key').value = generateKeyAuthString();
+}
+
+async function loadRLicenses() {
+  try {
+    rLicensesData = await apiGet('/reseller/api/licenses');
+    renderRLicenses(rLicensesData);
+  } catch(e) { showToast('Failed to load licenses', 'error'); }
+}
+
+function renderRLicenses(licenses) {
+  const tb = document.getElementById('r-lic-tbody');
+  if (!licenses.length) {
+    tb.innerHTML = '<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--text3);">No licenses generated yet. Click "Generate License Key" above!</td></tr>';
+    return;
+  }
+  tb.innerHTML = licenses.map(l => `
+    <tr>
+      <td>
+        <span class="key-mono" style="font-size:13px;font-weight:700;">${esc(l.key)}</span>
+        <button class="btn btn-secondary btn-sm" style="margin-left:6px;padding:2px 8px;" onclick="copyText('${esc(l.key)}', 'License key copied!')">📋</button>
+      </td>
+      <td>
+        <div class="fw-600" style="color:var(--cyan-light);font-size:13px;">${esc(l.time_left)}</div>
+        <div class="text-xs text-muted">Expires: ${esc(l.expires_at)}</div>
+      </td>
+      <td>
+        <span class="badge badge-${l.status.toLowerCase()}">${esc(l.status)}</span>
+      </td>
+      <td>
+        <span class="key-mono" style="font-size:11px;">${esc(l.hwid)}</span>
+      </td>
+      <td class="text-sm text-muted">${esc(l.created_at)}</td>
+      <td>
+        <div class="action-btns">
+          <button class="btn btn-secondary btn-sm" onclick='openEditRLicModal(${JSON.stringify(l)})'>✏️ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteRLic(${l.id}, '${esc(l.key)}')">🗑</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterRLicenses() {
+  const q = document.getElementById('search-r-lic').value.toLowerCase().trim();
+  renderRLicenses(rLicensesData.filter(l => l.key.toLowerCase().includes(q) || (l.hwid && l.hwid.toLowerCase().includes(q)) || l.status.toLowerCase().includes(q)));
+}
+
+function toggleRLicCustomDuration() {
+  const val = document.getElementById('r-modal-lic-duration-type').value;
+  document.getElementById('r-lic-custom-duration-group').style.display = (val === 'custom_date') ? 'block' : 'none';
+}
+
+function openAddRLicModal() {
+  document.getElementById('r-lic-modal-title').textContent = 'Generate License Key (1 Credit)';
+  document.getElementById('r-edit-lic-id').value = '';
+  document.getElementById('r-modal-lic-key').value = generateKeyAuthString();
+  document.getElementById('r-modal-lic-duration-type').value = '30d';
+  document.getElementById('r-lic-custom-duration-group').style.display = 'none';
+  document.getElementById('r-modal-lic-custom-duration').value = '';
+  document.getElementById('r-lic-hwid-group').style.display = 'none';
+  document.getElementById('r-modal-lic-reset-hwid-flag').value = 'false';
+  document.getElementById('r-lic-cost-note').style.display = 'block';
+  openModal('modal-reseller-license');
+}
+
+function openEditRLicModal(l) {
+  document.getElementById('r-lic-modal-title').textContent = 'Edit License Key';
+  document.getElementById('r-edit-lic-id').value = l.id;
+  document.getElementById('r-modal-lic-key').value = l.key;
+  document.getElementById('r-modal-lic-duration-type').value = '30d';
+  document.getElementById('r-lic-custom-duration-group').style.display = 'none';
+  document.getElementById('r-modal-lic-custom-duration').value = '';
+  document.getElementById('r-lic-hwid-group').style.display = 'block';
+  document.getElementById('r-modal-lic-hwid-text').textContent = l.hwid || 'Not Bound';
+  document.getElementById('r-modal-lic-reset-hwid-flag').value = 'false';
+  document.getElementById('r-lic-cost-note').style.display = 'none';
+  openModal('modal-reseller-license');
+}
+
+function resetRLicHwid() {
+  document.getElementById('r-modal-lic-reset-hwid-flag').value = 'true';
+  document.getElementById('r-modal-lic-hwid-text').textContent = 'Will reset on save';
+  showToast('License HWID reset flagged. Click Save to apply.', 'info');
+}
+
+async function saveResellerLicense() {
+  const id = document.getElementById('r-edit-lic-id').value;
+  const key = document.getElementById('r-modal-lic-key').value.trim();
+  const durationType = document.getElementById('r-modal-lic-duration-type').value;
+  const customDate = document.getElementById('r-modal-lic-custom-duration').value;
+  const resetHwid = document.getElementById('r-modal-lic-reset-hwid-flag').value === 'true';
+
+  if (!key) { showToast('License key is required.', 'warning'); return; }
+  if (durationType === 'custom_date' && !customDate) { showToast('Please select a custom expiry date.', 'warning'); return; }
+
+  const btn = document.getElementById('r-save-lic-btn');
+  btn.disabled = true; btn.textContent = '⏳ Saving…';
+
+  const payload = { custom_key: key, key: key, duration_type: durationType, custom_date: customDate, reset_hwid: resetHwid };
+
+  try {
+    let res;
+    if (id) res = await apiPut(`/reseller/api/licenses/${id}`, payload);
+    else     res = await apiPost('/reseller/api/licenses', payload);
+
+    if (res.success) {
+      showToast(res.message, 'success');
+      closeModal('modal-reseller-license');
+      if (res.credits !== undefined) updateCreditsUI(res.credits);
+      loadRLicenses();
+      loadRStats();
+    } else {
+      showToast(res.message, 'error');
+    }
+  } catch(e) { showToast('Network error', 'error'); }
+  finally { btn.disabled = false; btn.textContent = '🔑 Generate Key'; }
+}
+
+function confirmDeleteRLic(id, key) {
+  document.getElementById('r-delete-msg').textContent = `Delete license key "${key}"?`;
+  document.getElementById('r-confirm-delete-btn').onclick = async () => {
+    const res = await apiDelete(`/reseller/api/licenses/${id}`);
+    if (res.success) { showToast(res.message, 'success'); loadRLicenses(); loadRStats(); }
+    else showToast(res.message, 'error');
+    closeModal('modal-reseller-delete');
+  };
+  openModal('modal-reseller-delete');
+}
+
+/* ═══════════════════════════ API KEY RESET ═══════════════════════════ */
+async function resetResellerApiKey() {
+  const btn = document.getElementById('r-reset-key-btn');
+  btn.disabled = true; btn.textContent = '⏳ Regenerating…';
+  try {
+    const res = await apiPost('{{ url_for("client_reset_api_key") }}', {});
+    if (res.success) {
+      document.getElementById('r-api-key-input').value = res.api_key;
+      document.getElementById('r-doc-key-preview').textContent = res.api_key;
+      const base = '{{ base_url }}';
+      document.getElementById('r-url-add-user').textContent = `${base}/api/v1/manage?key=${res.api_key}&action=add&username=Shubhajit&password=1&duration=30`;
+      document.getElementById('r-url-add-lic').textContent = `${base}/api/v1/manage?key=${res.api_key}&action=add_license&duration=30`;
+      document.getElementById('r-url-reset-hwid').textContent = `${base}/api/v1/manage?key=${res.api_key}&action=reset_hwid&username=Shubhajit`;
+      document.getElementById('r-url-status').textContent = `${base}/api/v1/manage?key=${res.api_key}&action=status&username=Shubhajit`;
+      showToast('API Key regenerated successfully!', 'success');
+    } else {
+      showToast('Failed to regenerate key', 'error');
+    }
+  } catch(e) { showToast('Network error', 'error'); }
+  finally { btn.disabled = false; btn.textContent = '🔄 Reset API Key'; }
+}
+
+/* ═══════════════════════════ REGENERATE PORTAL TOKEN ═════════════════ */
+async function regeneratePortalToken() {
+  const btn = document.getElementById('r-regen-portal-btn');
+  btn.disabled = true; btn.textContent = '⏳ Regenerating…';
+  try {
+    const res = await apiPost('/reseller/api/regen-portal-token', {});
+    if (res.success) {
+      const base = '{{ base_url }}';
+      document.getElementById('r-portal-url-display').textContent = `${base}/portal/reset/${res.portal_token}`;
+      showToast('Public Reset Portal Link regenerated!', 'success');
+    } else {
+      showToast('Failed to regenerate portal link', 'error');
+    }
+  } catch(e) { showToast('Network error', 'error'); }
+  finally { btn.disabled = false; btn.textContent = '🔄 Regenerate Portal Token'; }
+}
+
+/* ═══════════════════════════ RESET HUB ═══════════════════════════════ */
+async function loadRResetUsers() {
+  try {
+    const users = await apiGet('/reseller/api/users-list');
+    const sel = document.getElementById('r-reset-user-select');
+    sel.innerHTML = '<option value="">— Choose a user account —</option>' +
+      users.map(u => `<option value="${u.id}">${esc(u.username)} (${esc(u.time_left)})</option>`).join('');
+  } catch(e) {}
+}
+
+function onRResetUserChange() {
+  const sel = document.getElementById('r-reset-user-select');
+  const actions = document.getElementById('r-reset-actions');
+  const placeholder = document.getElementById('r-reset-placeholder');
+  if (sel.value) {
+    actions.style.display = 'grid';
+    placeholder.style.display = 'none';
+    const name = sel.options[sel.selectedIndex].text;
+    document.getElementById('r-selected-user-name').textContent = name;
+    document.getElementById('r-selected-user-badge').classList.remove('hidden');
+  } else {
+    actions.style.display = 'none';
+    placeholder.style.display = 'block';
+    document.getElementById('r-selected-user-badge').classList.add('hidden');
+  }
+}
+
+async function doRReset(action) {
+  const uid = document.getElementById('r-reset-user-select').value;
+  if (!uid) { showToast('Please select a user first.', 'warning'); return; }
+  const payload = { user_id: parseInt(uid), action };
+  if (action === 'password') {
+    const p = document.getElementById('r-reset-pwd').value;
+    if (!p) { showToast('Please enter a password.', 'warning'); return; }
+    payload.new_password = p;
+  }
+  if (action === 'duration') {
+    payload.duration_type = document.getElementById('r-reset-duration-select').value;
+  }
+  try {
+    const res = await apiPost('/reseller/api/reset-user', payload);
+    if (res.success) {
+      document.getElementById('r-reset-result-body').innerHTML = `<div class="alert alert-success">${esc(res.message)}</div>`;
+      openModal('modal-reseller-reset-result');
+      if (action === 'password') document.getElementById('r-reset-pwd').value = '';
+      loadRResetUsers();
+    } else {
+      showToast(res.message, 'error');
+    }
+  } catch(e) { showToast('Network error', 'error'); }
+}
+
+/* ─── Init ──────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  loadRStats();
+});
+</script>
+</body>
+</html>
