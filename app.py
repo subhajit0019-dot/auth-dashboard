@@ -1,10 +1,13 @@
 import io
 import os
 import json
+import time
 import string
 import secrets
 import zipfile
 import datetime
+import threading
+from collections import defaultdict, deque
 from functools import wraps
 
 from flask import (Flask, render_template, request, redirect,
@@ -27,6 +30,7 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, 'static')
 )
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max payload to prevent memory-exhaustion DoS
 
 # Database configuration (Supports Vercel serverless /tmp or remote PostgreSQL like Neon/Supabase)
 if (os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME')) and not os.environ.get('DATABASE_URL'):
@@ -41,10 +45,100 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
+# ---------------------------------------------------------------------------
+# ANTI-DDOS & FLOOD PROTECTION SHIELD
+# ---------------------------------------------------------------------------
+class AntiDDoSShield:
+    def __init__(self):
+        self._lock = threading.Lock()
+        self.ip_requests = defaultdict(deque)       # IP -> deque of request timestamps
+        self.ip_auth_requests = defaultdict(deque)  # IP -> deque of auth/login timestamps
+        self.banned_ips = {}                        # IP -> unban timestamp
+        self.violation_counts = defaultdict(int)
+
+        # Scanner and exploit tool blacklists
+        self.bad_agents = [
+            'sqlmap', 'nikto', 'masscan', 'zgrab', 'gobuster', 'dirbuster',
+            'nmap', 'wpscan', 'acunetix', 'havij', 'pangolin'
+        ]
+
+    def get_real_ip(self, req):
+        """Extract true client IP behind Cloudflare, Nginx, Vercel, or Railway proxies."""
+        if req.headers.get('CF-Connecting-IP'):
+            return req.headers.get('CF-Connecting-IP').strip()
+        if req.headers.get('X-Forwarded-For'):
+            return req.headers.get('X-Forwarded-For').split(',')[0].strip()
+        if req.headers.get('X-Real-IP'):
+            return req.headers.get('X-Real-IP').strip()
+        return req.remote_addr or '127.0.0.1'
+
+    def is_bad_bot(self, user_agent):
+        if not user_agent:
+            return False
+        ua = user_agent.lower()
+        return any(bad in ua for bad in self.bad_agents)
+
+    def check_request(self, req):
+        ip = self.get_real_ip(req)
+        now = time.time()
+        ua = req.headers.get('User-Agent', '')
+
+        # 1. Block automated vulnerability scanners
+        if self.is_bad_bot(ua):
+            return False, "Automated vulnerability scanner blocked by Anti-DDoS Shield."
+
+        with self._lock:
+            # 2. Check if currently banned
+            if ip in self.banned_ips:
+                if now < self.banned_ips[ip]:
+                    remaining = int(self.banned_ips[ip] - now)
+                    return False, f"Your IP is temporarily banned due to flood detection. Retry in {remaining}s."
+                else:
+                    del self.banned_ips[ip]
+                    self.violation_counts[ip] = 0
+
+            # 3. Clean up timestamps older than 60 seconds
+            history = self.ip_requests[ip]
+            while history and history[0] < now - 60:
+                history.popleft()
+
+            # Record this request
+            history.append(now)
+
+            # 4. Burst limit: Max 50 requests in 3 seconds
+            recent_burst = sum(1 for t in history if t > now - 3)
+            if recent_burst > 50:
+                self.banned_ips[ip] = now + 900  # 15 min ban
+                return False, "DDoS flood detected (Burst threshold exceeded). IP banned for 15 minutes."
+
+            # 5. Sustained limit: Max 200 requests in 60 seconds
+            if len(history) > 200:
+                self.violation_counts[ip] += 1
+                if self.violation_counts[ip] >= 3:
+                    self.banned_ips[ip] = now + 900  # 15 min ban
+                    return False, "Excessive request rate detected. IP banned for 15 minutes."
+                return False, "Rate limit exceeded (Anti-DDoS Protection). Please slow down."
+
+            # 6. Sensitive Auth Endpoint Flood (Login / Reset / Auth API)
+            if req.path.startswith('/api/v1/auth') or req.path in ['/login', '/portal/reset']:
+                auth_hist = self.ip_auth_requests[ip]
+                while auth_hist and auth_hist[0] < now - 60:
+                    auth_hist.popleft()
+                auth_hist.append(now)
+
+                # Max 25 auth calls per 30 seconds
+                recent_auth = sum(1 for t in auth_hist if t > now - 30)
+                if recent_auth > 25:
+                    return False, "Too many authentication attempts. Please wait 30 seconds."
+
+        return True, ""
+
+ddos_shield = AntiDDoSShield()
+
 _db_initialized = False
 
 @app.before_request
-def ensure_db_ready():
+def security_and_ddos_filter():
     global _db_initialized
     if not _db_initialized:
         try:
@@ -53,6 +147,60 @@ def ensure_db_ready():
             _db_initialized = True
         except Exception as e:
             print(f"[!] DB init error: {e}")
+
+    # Allow static assets without strict rate limiting
+    if request.path.startswith('/static/'):
+        return None
+
+    # Check Anti-DDoS rules
+    allowed, reason = ddos_shield.check_request(request)
+    if not allowed:
+        if request.is_json or request.path.startswith('/api/'):
+            resp = jsonify({
+                'success': False,
+                'error': 'ddos_rate_limited',
+                'message': reason
+            })
+            resp.status_code = 429
+            resp.headers['Retry-After'] = '30'
+            return resp
+        else:
+            html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>429 Too Many Requests — Anti-DDoS Shield</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {{ background:#0b0d17; color:#fff; font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }}
+        .card {{ background:#131728; border:1px solid rgba(239,68,68,0.3); border-radius:14px; padding:36px; max-width:440px; text-align:center; box-shadow:0 20px 40px rgba(0,0,0,0.5); }}
+        h2 {{ margin:0 0 10px; color:#f87171; font-size:22px; }}
+        p {{ color:#94a3b8; font-size:14px; line-height:1.6; margin-bottom:20px; }}
+        .btn {{ display:inline-block; background:#7c3aed; color:#fff; text-decoration:none; padding:10px 22px; border-radius:8px; font-weight:600; font-size:14px; transition:0.2s; }}
+        .btn:hover {{ background:#6d28d9; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div style="font-size:44px;margin-bottom:12px;">🛡️</div>
+        <h2>Anti-DDoS Shield Active</h2>
+        <p>{reason}</p>
+        <a href="javascript:location.reload()" class="btn">🔄 Refresh Page</a>
+    </div>
+</body>
+</html>"""
+            resp = make_response(html, 429)
+            resp.headers['Retry-After'] = '30'
+            return resp
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['X-DDoS-Protection'] = 'Active-Shield-v2'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
