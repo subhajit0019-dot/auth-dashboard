@@ -19,7 +19,13 @@ from models import (db, User, LicenseKey, ApiDoc, ResetToken, AuditLog,
 # ---------------------------------------------------------------------------
 # App setup
 # ---------------------------------------------------------------------------
-app = Flask(__name__)
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, 'templates'),
+    static_folder=os.path.join(BASE_DIR, 'static')
+)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
 # Database configuration (Supports Vercel serverless /tmp or remote PostgreSQL like Neon/Supabase)
@@ -35,15 +41,18 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
-def init_db():
-    try:
-        with app.app_context():
+_db_initialized = False
+
+@app.before_request
+def ensure_db_ready():
+    global _db_initialized
+    if not _db_initialized:
+        try:
             db.create_all()
             seed_database()
-    except Exception as e:
-        print(f"[!] DB Initialization warning: {e}")
-
-init_db()
+            _db_initialized = True
+        except Exception as e:
+            print(f"[!] DB init error: {e}")
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
