@@ -689,10 +689,10 @@ function renderRUsers(users) {
   tb.innerHTML = users.map(u => `
     <tr>
       <td>
-        <div style="font-weight:700;color:#fff;">${esc(u.username)}</div>
+        <div style="font-weight:700;color:var(--color-text-primary);">${esc(u.username)}</div>
       </td>
       <td>
-        <div class="fw-600" style="color:var(--cyan-light);font-size:13px;">${esc(u.time_left)}</div>
+        <div class="fw-600" style="color:var(--color-text-accent);font-size:var(--text-sm);">${esc(u.time_left)}</div>
         <div class="text-xs text-muted">Expires: ${esc(u.expires_at)}</div>
       </td>
       <td>
@@ -702,14 +702,14 @@ function renderRUsers(users) {
       </td>
       <td>
         ${u.hwid_lock_enabled === false 
-          ? '<span class="badge" style="background:rgba(16,185,129,0.2);color:#10b981;border:1px solid rgba(16,185,129,0.4);">🔓 Multi-PC (Free)</span>' 
-          : `<span class="key-mono" style="font-size:11px;">${esc(u.hwid)}</span>`}
+          ? '<span class="badge" style="background:rgba(16,185,129,0.2);color:var(--color-text-success);border:1px solid rgba(16,185,129,0.4);">🔓 Multi-PC (Free)</span>' 
+          : `<span class="key-mono">${esc(u.hwid)}</span>`}
       </td>
       <td class="text-sm text-muted">${esc(u.created_at)}</td>
       <td>
         <div class="action-btns">
           <button class="btn btn-secondary btn-sm" onclick='openEditRUserModal(${JSON.stringify(u)})'>✏️ Edit</button>
-          <button class="btn btn-danger btn-sm" onclick="confirmDeleteRUser(${u.id}, '${esc(u.username)}')">🗑</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteRUser(${u.id}, '${esc(u.username)}')">🗑 Delete</button>
         </div>
       </td>
     </tr>
@@ -841,11 +841,11 @@ function renderRLicenses(licenses) {
   tb.innerHTML = licenses.map(l => `
     <tr>
       <td>
-        <span class="key-mono" style="font-size:13px;font-weight:700;">${esc(l.key)}</span>
-        <button class="btn btn-secondary btn-sm" style="margin-left:6px;padding:2px 8px;" onclick="copyText('${esc(l.key)}', 'License key copied!')">📋</button>
+        <span class="key-mono">${esc(l.key)}</span>
+        <button class="btn btn-secondary btn-sm" onclick="copyText('${esc(l.key)}', 'License key copied!')" title="Copy Key">📋 Copy</button>
       </td>
       <td>
-        <div class="fw-600" style="color:var(--cyan-light);font-size:13px;">${esc(l.time_left)}</div>
+        <div class="fw-600" style="color:var(--color-text-accent);font-size:var(--text-sm);">${esc(l.time_left)}</div>
         <div class="text-xs text-muted">Expires: ${esc(l.expires_at)}</div>
       </td>
       <td>
@@ -853,14 +853,14 @@ function renderRLicenses(licenses) {
       </td>
       <td>
         ${l.hwid_lock_enabled === false 
-          ? '<span class="badge" style="background:rgba(16,185,129,0.2);color:#10b981;border:1px solid rgba(16,185,129,0.4);">🔓 Multi-PC (Free)</span>' 
-          : `<span class="key-mono" style="font-size:11px;">${esc(l.hwid)}</span>`}
+          ? '<span class="badge" style="background:rgba(16,185,129,0.2);color:var(--color-text-success);border:1px solid rgba(16,185,129,0.4);">🔓 Multi-PC (Free)</span>' 
+          : `<span class="key-mono">${esc(l.hwid)}</span>`}
       </td>
       <td class="text-sm text-muted">${esc(l.created_at)}</td>
       <td>
         <div class="action-btns">
           <button class="btn btn-secondary btn-sm" onclick='openEditRLicModal(${JSON.stringify(l)})'>✏️ Edit</button>
-          <button class="btn btn-danger btn-sm" onclick="confirmDeleteRLic(${l.id}, '${esc(l.key)}')">🗑</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteRLic(${l.id}, '${esc(l.key)}')">🗑 Delete</button>
         </div>
       </td>
     </tr>
