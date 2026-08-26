@@ -1,5 +1,6 @@
 import io
 import os
+import re
 import json
 import time
 import string
@@ -222,6 +223,16 @@ def add_security_headers(response):
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
+
+    # Dynamically minify HTML output to strip readable indentation and comments
+    if response.content_type and 'text/html' in response.content_type:
+        try:
+            html_text = response.get_data(as_text=True)
+            html_text = re.sub(r'<!--(?!\[if)[\s\S]*?-->', '', html_text)
+            html_text = re.sub(r'\s+', ' ', html_text)
+            response.set_data(html_text)
+        except Exception:
+            pass
 
     return response
 
