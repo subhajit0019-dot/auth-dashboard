@@ -26,6 +26,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
+with app.app_context():
+    db.create_all()
+    seed_database()
+
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to continue.'
@@ -1760,7 +1764,5 @@ def admin_users_list():
 # ---------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        seed_database()
-    app.run(debug=True, port=5050)
+    port = int(os.environ.get('PORT', 5050))
+    app.run(host='0.0.0.0', port=port, debug=False)
