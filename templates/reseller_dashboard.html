@@ -194,41 +194,43 @@
 
   <!-- ══════════════════════ SIDEBAR ══════════════════════ -->
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-icon">👑</div>
-      <div class="logo-text">
-        {{ user.panel_name or 'Reseller Panel' }}
-        <div class="logo-sub">Sub-Reseller Portal</div>
+    <div class="sidebar-logo" style="padding:20px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:12px;">
+      <div class="logo-icon" style="width:34px;height:34px;border-radius:var(--radius-md);background:linear-gradient(135deg,#7c3aed,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:16px;">👑</div>
+      <div class="logo-text" style="line-height:1.2;">
+        <div style="font-weight:700;font-size:var(--text-base);color:var(--color-text-primary);">{{ user.panel_name or 'Reseller Panel' }}</div>
+        <div class="logo-sub" style="font-size:var(--text-xs);color:var(--color-text-muted);">Reseller Portal</div>
       </div>
     </div>
 
-    <div class="sidebar-user">
-      <div class="user-avatar" style="background:linear-gradient(135deg,#7c3aed,#06b6d4);">{{ user.username[0]|upper }}</div>
-      <div class="user-info">
-        <div class="user-name">{{ user.username }}</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
-          <span class="user-role badge-admin" style="font-size:10px;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.4);border-radius:99px;padding:1px 8px;color:var(--purple-light);font-weight:600;">Reseller</span>
-          <span class="badge" style="background:rgba(16,185,129,0.15);color:var(--green);font-size:10px;font-weight:700;">💎 <span id="sidebar-credits">{{ user.credits }}</span></span>
+    <div class="sidebar-user" style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="user-avatar" style="width:28px;height:28px;border-radius:var(--radius-full);background:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:var(--text-xs);font-weight:700;color:#fff;">{{ user.username[0]|upper }}</div>
+        <div>
+          <div class="user-name" style="font-weight:600;font-size:var(--text-sm);color:var(--color-text-primary);">{{ user.username }}</div>
+          <span class="badge" style="font-size:10px;padding:1px 6px;border-radius:var(--radius-full);background:rgba(124,58,237,0.2);color:var(--purple-light);">Reseller</span>
         </div>
       </div>
+      <span class="badge" style="background:rgba(16,185,129,0.15);color:var(--color-text-success);font-size:var(--text-xs);font-weight:700;padding:3px 8px;border-radius:var(--radius-full);">
+        💎 <span id="sidebar-credits">{{ user.credits }}</span>
+      </span>
     </div>
 
     <nav class="sidebar-nav">
       <div class="nav-section-label">Main Menu</div>
       <div class="nav-item active" id="nav-overview" onclick="switchTab('overview')">
-        <span class="nav-icon">📊</span> 1. Overview
+        <span class="nav-icon">📊</span> Overview
       </div>
       <div class="nav-item" id="nav-users" onclick="switchTab('users')">
-        <span class="nav-icon">👥</span> 2. User / Pass
+        <span class="nav-icon">👥</span> Users &amp; Passwords
       </div>
       <div class="nav-item" id="nav-licenses" onclick="switchTab('licenses')">
-        <span class="nav-icon">🔑</span> 3. Licence Key
+        <span class="nav-icon">🔑</span> License Keys
       </div>
       <div class="nav-item" id="nav-api-docs" onclick="switchTab('api-docs')">
-        <span class="nav-icon">📖</span> 4. API Docs
+        <span class="nav-icon">📖</span> API Docs &amp; Bots
       </div>
       <div class="nav-item" id="nav-reset" onclick="switchTab('reset')">
-        <span class="nav-icon">🔄</span> 5. All User/Licence Reset Link
+        <span class="nav-icon">🔄</span> Reset Portal Link
       </div>
     </nav>
 
@@ -246,7 +248,7 @@
     <section id="tab-overview" class="tab-section">
       <div class="section-header">
         <div class="section-title">{{ user.panel_name or 'Reseller Panel' }} Overview</div>
-        <div class="section-sub">Manage your client credentials, license keys, and credits</div>
+        <div class="section-sub">Manage client credentials, license keys, and credits</div>
       </div>
 
       <div class="stats-grid">
@@ -272,18 +274,18 @@
         </div>
       </div>
 
-      <!-- Quick Actions Card -->
+      <!-- Quick Actions Card (Harmonized Hierarchy) -->
       <div class="card mb-24">
-        <div class="card-title"><span>⚡</span> Quick Reseller Actions</div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div class="card-title"><span>⚡</span> Quick Actions</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn btn-primary" onclick="openAddRUserModal()">➕ Create App User (1 Credit)</button>
           <button class="btn btn-secondary" onclick="openAddRLicModal()">🔑 Generate License Key (1 Credit)</button>
-          <button class="btn btn-secondary" onclick="switchTab('api-docs')">📖 View My API Key &amp; Bot Docs</button>
-          <button class="btn btn-secondary" onclick="switchTab('reset')">🔄 Reset Client HWID / Pass</button>
+          <button class="btn btn-secondary" onclick="switchTab('api-docs')">📖 Bot API Docs</button>
+          <button class="btn btn-secondary" onclick="switchTab('reset')">🔄 HWID Reset Portal</button>
         </div>
       </div>
 
-      <!-- Activity Logs -->
+      <!-- Activity Logs (High Information Density) -->
       <div class="card">
         <div class="card-title"><span>📋</span> Reseller Activity Logs</div>
         <ul class="activity-list" id="r-activity-list">
