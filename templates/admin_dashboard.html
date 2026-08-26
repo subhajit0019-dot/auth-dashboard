@@ -1199,7 +1199,7 @@ function renderResellersPagination(totalCount, totalPages) {
 
   pagContainer.innerHTML = `
     <div class="pagination-info">
-      Showing <strong>${startIdx}–${endIdx}</strong> of <strong>${totalCount}</strong> resellers • Page <strong style="color:var(--purple-light);">${currentResellerPage}</strong> / ${totalPages}
+      Showing <strong>${startIdx}–${endIdx}</strong> of <strong>${totalCount}</strong> resellers • <span class="badge" style="background:rgba(124,58,237,0.18);color:var(--purple-light);border:1px solid rgba(124,58,237,0.3);padding:2px 8px;font-size:11px;font-weight:700;">Page ${currentResellerPage} / ${totalPages}</span>
     </div>
     <div class="pagination-controls">
       <button class="btn-page-nav" ${currentResellerPage <= 1 ? 'disabled' : ''} onclick="moveResellerPage(-1)" title="Previous Page">
