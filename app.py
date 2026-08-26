@@ -23,7 +23,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
 # Database configuration (Supports Vercel serverless /tmp or remote PostgreSQL like Neon/Supabase)
-if os.environ.get('VERCEL') and not os.environ.get('DATABASE_URL'):
+if (os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME')) and not os.environ.get('DATABASE_URL'):
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/auth.db'
 else:
     db_uri = os.environ.get('DATABASE_URL', 'sqlite:///auth.db')
@@ -35,9 +35,15 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
-with app.app_context():
-    db.create_all()
-    seed_database()
+def init_db():
+    try:
+        with app.app_context():
+            db.create_all()
+            seed_database()
+    except Exception as e:
+        print(f"[!] DB Initialization warning: {e}")
+
+init_db()
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
