@@ -521,6 +521,7 @@ def reseller_list_users():
             'is_active': u.is_active,
             'is_activated': u.is_activated,
             'is_expired': u.is_expired,
+            'hwid_lock_enabled': u.hwid_lock_enabled if u.hwid_lock_enabled is not None else True,
             'time_left': u.time_left,
             'expires_at': u.expires_at.strftime('%Y-%m-%d %H:%M') if u.expires_at else ('Lifetime' if u.duration_type == 'lifetime' else 'Starts on 1st login'),
             'hwid': u.hwid or 'Not Bound',
@@ -540,6 +541,7 @@ def reseller_create_user():
     username = data.get('username', '').strip()
     password = data.get('password', '')
     duration_type = data.get('duration_type', '30d')
+    hwid_lock = str(data.get('hwid_lock_enabled', 'true')).lower() in ['true', '1', 'yes']
 
     if not username:
         return jsonify({'success': False, 'message': 'Username is required.'})
@@ -563,6 +565,7 @@ def reseller_create_user():
         activated_at=None,
         expires_at=fixed_expiry,
         hwid=None,
+        hwid_lock_enabled=hwid_lock,
         created_by_id=current_user.id
     )
     if current_user.role == 'reseller':
@@ -570,7 +573,7 @@ def reseller_create_user():
 
     db.session.add(user)
     db.session.commit()
-    log_action(f'Reseller {current_user.username} created User: {username}', actor_id=current_user.id)
+    log_action(f'Reseller {current_user.username} created User: {username} (HWID Lock: {"1-PC" if hwid_lock else "Unlimited Multi-PC"})', actor_id=current_user.id)
 
     return jsonify({
         'success': True,
@@ -599,6 +602,9 @@ def reseller_update_user(uid):
             user.expires_at = utc_now() + datetime.timedelta(days=days)
         else:
             user.expires_at = fixed_expiry
+
+    if 'hwid_lock_enabled' in data:
+        user.hwid_lock_enabled = str(data['hwid_lock_enabled']).lower() in ['true', '1', 'yes']
 
     if data.get('reset_hwid'):
         user.hwid = None
@@ -640,6 +646,7 @@ def reseller_list_licenses():
             'status': lic.display_status,
             'is_activated': lic.is_activated,
             'is_expired': lic.is_expired,
+            'hwid_lock_enabled': lic.hwid_lock_enabled if lic.hwid_lock_enabled is not None else True,
             'time_left': lic.time_left,
             'expires_at': lic.expires_at.strftime('%Y-%m-%d %H:%M') if lic.expires_at else ('Lifetime' if lic.duration_type == 'lifetime' else 'Starts on 1st use'),
             'hwid': lic.hwid or 'Not Bound',
@@ -659,6 +666,7 @@ def reseller_create_license():
     custom_key = data.get('custom_key', '').strip()
     duration_type = data.get('duration_type', '30d')
     days, fixed_expiry = parse_duration_type(duration_type, data.get('custom_date'))
+    hwid_lock = str(data.get('hwid_lock_enabled', 'true')).lower() in ['true', '1', 'yes']
 
     if custom_key:
         if LicenseKey.query.filter_by(created_by_id=current_user.id, key=custom_key).first():
@@ -675,6 +683,7 @@ def reseller_create_license():
         activated_at=None,
         expires_at=fixed_expiry,
         hwid=None,
+        hwid_lock_enabled=hwid_lock,
         created_by_id=current_user.id
     )
     if current_user.role == 'reseller':
@@ -682,7 +691,7 @@ def reseller_create_license():
 
     db.session.add(lic)
     db.session.commit()
-    log_action(f'Reseller {current_user.username} generated License: {key}', actor_id=current_user.id)
+    log_action(f'Reseller {current_user.username} generated License: {key} (HWID Lock: {"1-PC" if hwid_lock else "Unlimited Multi-PC"})', actor_id=current_user.id)
 
     return jsonify({
         'success': True,
@@ -709,6 +718,9 @@ def reseller_update_license(lid):
             lic.expires_at = utc_now() + datetime.timedelta(days=days)
         else:
             lic.expires_at = fixed_expiry
+
+    if 'hwid_lock_enabled' in data:
+        lic.hwid_lock_enabled = str(data['hwid_lock_enabled']).lower() in ['true', '1', 'yes']
 
     if data.get('reset_hwid'):
         lic.hwid = None
@@ -1314,36 +1326,41 @@ def api_exe_user_login():
     # FIRST TIME EXE ACTIVATION: Start Timer & Lock HWID + SID! (KeyAuth Style)
     if not user.is_activated:
         user.activated_at = now
-        if hwid:
-            user.hwid = hwid
-        if sid:
-            user.sid = sid
+        if user.hwid_lock_enabled:
+            if hwid:
+                user.hwid = hwid
+            if sid:
+                user.sid = sid
+        else:
+            user.hwid = None
+            user.sid = None
         if user.duration_type != 'lifetime' and user.duration_days:
             user.expires_at = now + datetime.timedelta(days=user.duration_days)
         db.session.commit()
-        log_action(f'App User activated on EXE: {user.username} (HWID: {user.hwid or "None"}, SID: {user.sid or "None"}, Duration: {user.time_left})', actor_id=user.id)
+        log_action(f'App User activated on EXE: {user.username} (HWID Lock: {"1-PC" if user.hwid_lock_enabled else "Unlocked (Multi-PC)"}, Duration: {user.time_left})', actor_id=user.id)
     else:
-        # Check HWID Lock
-        if hwid and user.hwid and user.hwid != hwid:
-            return jsonify({
-                'success': False,
-                'message': 'HWID mismatch! Hardware lock is bound to another PC. Please reset your HWID.',
-                'hwid_locked': True
-            }), 403
-        elif hwid and not user.hwid:
-            user.hwid = hwid
-            db.session.commit()
+        # Check HWID/SID Lock ONLY IF hwid_lock_enabled is True!
+        if user.hwid_lock_enabled:
+            if hwid and user.hwid and user.hwid != hwid:
+                return jsonify({
+                    'success': False,
+                    'message': 'HWID mismatch! Hardware lock is bound to another PC. Please reset your HWID.',
+                    'hwid_locked': True
+                }), 403
+            elif hwid and not user.hwid:
+                user.hwid = hwid
+                db.session.commit()
 
-        # Check SID Lock
-        if sid and user.sid and user.sid != sid:
-            return jsonify({
-                'success': False,
-                'message': 'SID mismatch! Security identifier does not match bound Windows profile.',
-                'sid_locked': True
-            }), 403
-        elif sid and not user.sid:
-            user.sid = sid
-            db.session.commit()
+            # Check SID Lock
+            if sid and user.sid and user.sid != sid:
+                return jsonify({
+                    'success': False,
+                    'message': 'SID mismatch! Security identifier does not match bound Windows profile.',
+                    'sid_locked': True
+                }), 403
+            elif sid and not user.sid:
+                user.sid = sid
+                db.session.commit()
 
         if user.is_expired:
             return jsonify({
@@ -1368,7 +1385,8 @@ def api_exe_user_login():
         'expires_at': user.expires_at.isoformat() if user.expires_at else None,
         'time_left': user.time_left,
         'is_lifetime': user.duration_type == 'lifetime',
-        'hwid': user.hwid,
+        'hwid_lock_enabled': user.hwid_lock_enabled if user.hwid_lock_enabled is not None else True,
+        'hwid': user.hwid or ('Unlocked (Multi-PC Free)' if not user.hwid_lock_enabled else None),
         'sid': user.sid
     }), 200
 
@@ -1407,26 +1425,32 @@ def api_verify_license():
     if not lic.is_activated:
         lic.activated_at = now
         lic.status = 'active'
-        if hwid:
-            lic.hwid = hwid
-        if sid:
-            lic.sid = sid
+        if lic.hwid_lock_enabled:
+            if hwid:
+                lic.hwid = hwid
+            if sid:
+                lic.sid = sid
+        else:
+            lic.hwid = None
+            lic.sid = None
         if lic.duration_type != 'lifetime' and lic.duration_days:
             lic.expires_at = now + datetime.timedelta(days=lic.duration_days)
         db.session.commit()
-        log_action(f'License activated on EXE: {lic.key} (HWID: {lic.hwid or "None"}, SID: {lic.sid or "None"}, Duration: {lic.time_left})')
+        log_action(f'License activated on EXE: {lic.key} (HWID Lock: {"1-PC" if lic.hwid_lock_enabled else "Unlocked (Multi-PC)"}, Duration: {lic.time_left})')
     else:
-        if hwid and lic.hwid and lic.hwid != hwid:
-            return jsonify({'valid': False, 'error': 'HWID mismatch on license key! Bound to another device.'}), 403
-        elif hwid and not lic.hwid:
-            lic.hwid = hwid
-            db.session.commit()
+        # Check HWID/SID Lock ONLY IF hwid_lock_enabled is True!
+        if lic.hwid_lock_enabled:
+            if hwid and lic.hwid and lic.hwid != hwid:
+                return jsonify({'valid': False, 'error': 'HWID mismatch on license key! Bound to another device.'}), 403
+            elif hwid and not lic.hwid:
+                lic.hwid = hwid
+                db.session.commit()
 
-        if sid and lic.sid and lic.sid != sid:
-            return jsonify({'valid': False, 'error': 'SID mismatch on license key!'}), 403
-        elif sid and not lic.sid:
-            lic.sid = sid
-            db.session.commit()
+            if sid and lic.sid and lic.sid != sid:
+                return jsonify({'valid': False, 'error': 'SID mismatch on license key!'}), 403
+            elif sid and not lic.sid:
+                lic.sid = sid
+                db.session.commit()
 
         if lic.is_expired:
             lic.status = 'expired'
@@ -1444,7 +1468,8 @@ def api_verify_license():
         'is_activated': True,
         'time_left': lic.time_left,
         'expires_at': lic.expires_at.isoformat() if lic.expires_at else None,
-        'hwid': lic.hwid,
+        'hwid_lock_enabled': lic.hwid_lock_enabled if lic.hwid_lock_enabled is not None else True,
+        'hwid': lic.hwid or ('Unlocked (Multi-PC Free)' if not lic.hwid_lock_enabled else None),
         'sid': lic.sid
     }), 200
 
@@ -1646,6 +1671,7 @@ def admin_list_users():
             'is_activated': u.is_activated,
             'is_expired': u.is_expired,
             'status_label': u.status_label,
+            'hwid_lock_enabled': u.hwid_lock_enabled if u.hwid_lock_enabled is not None else True,
             'expires_at': u.expires_at.strftime('%Y-%m-%d %H:%M') if u.expires_at else ('Lifetime' if u.duration_type == 'lifetime' else 'Starts on 1st login'),
             'time_left': u.time_left,
             'hwid': u.hwid or 'Not Bound',
@@ -1666,6 +1692,7 @@ def admin_create_user():
     password = data.get('password', '')
     duration_type = data.get('duration_type', '30d')
     custom_duration = data.get('custom_duration', '')
+    hwid_lock = str(data.get('hwid_lock_enabled', 'true')).lower() in ['true', '1', 'yes']
 
     if not username:
         return jsonify({'success': False, 'message': 'Username is required.'})
@@ -1688,11 +1715,12 @@ def admin_create_user():
         activated_at=None,
         expires_at=fixed_expiry,
         hwid=None,
+        hwid_lock_enabled=hwid_lock,
         created_by_id=current_user.id
     )
     db.session.add(user)
     db.session.commit()
-    log_action(f'Created App User: {username} ({user.time_left})', actor_id=current_user.id)
+    log_action(f'Created App User: {username} ({user.time_left}, HWID Lock: {"1-PC" if hwid_lock else "Unlimited Multi-PC"})', actor_id=current_user.id)
     return jsonify({
         'success': True,
         'message': f'User "{username}" created ({user.time_left}).',
@@ -1720,6 +1748,9 @@ def admin_update_user(uid):
 
     if 'is_active' in data:
         user.is_active = bool(data['is_active'])
+
+    if 'hwid_lock_enabled' in data:
+        user.hwid_lock_enabled = str(data['hwid_lock_enabled']).lower() in ['true', '1', 'yes']
 
     if 'duration_type' in data:
         days, fixed_expiry = parse_duration_type(data['duration_type'], data.get('custom_duration'))
@@ -1773,6 +1804,7 @@ def admin_list_licenses():
             'status': lic.display_status,
             'is_activated': lic.is_activated,
             'is_expired': lic.is_expired,
+            'hwid_lock_enabled': lic.hwid_lock_enabled if lic.hwid_lock_enabled is not None else True,
             'time_left': lic.time_left,
             'expires_at': lic.expires_at.strftime('%Y-%m-%d %H:%M') if lic.expires_at else ('Lifetime' if lic.duration_type == 'lifetime' else 'Starts on 1st use'),
             'hwid': lic.hwid or 'Not Bound',
@@ -1790,6 +1822,7 @@ def admin_create_license():
     duration_type = data.get('duration_type', '30d')
     custom_val = data.get('custom_duration', '')
     days, fixed_expiry = parse_duration_type(duration_type, custom_val)
+    hwid_lock = str(data.get('hwid_lock_enabled', 'true')).lower() in ['true', '1', 'yes']
 
     if custom_key:
         key = custom_key
@@ -1804,11 +1837,12 @@ def admin_create_license():
         activated_at=None,
         expires_at=fixed_expiry,
         hwid=None,
+        hwid_lock_enabled=hwid_lock,
         created_by_id=current_user.id
     )
     db.session.add(lic)
     db.session.commit()
-    log_action(f'Created license key: {key} ({lic.time_left})', actor_id=current_user.id)
+    log_action(f'Created license key: {key} ({lic.time_left}, HWID Lock: {"1-PC" if hwid_lock else "Unlimited Multi-PC"})', actor_id=current_user.id)
     return jsonify({'success': True, 'message': f'License key "{key}" created ({lic.time_left}).', 'key': key})
 
 
@@ -1827,6 +1861,8 @@ def admin_update_license(lid):
 
     if 'status' in data:
         lic.status = data['status']
+    if 'hwid_lock_enabled' in data:
+        lic.hwid_lock_enabled = str(data['hwid_lock_enabled']).lower() in ['true', '1', 'yes']
     if 'duration_type' in data:
         days, fixed_expiry = parse_duration_type(data['duration_type'], data.get('custom_duration'))
         lic.duration_type = data['duration_type']

@@ -36,6 +36,7 @@ class User(UserMixin, db.Model):
     expires_at = db.Column(db.DateTime, nullable=True)  # Exact expiry (calculated at activation)
     hwid = db.Column(db.String(255), nullable=True)  # Hardware ID locked on first EXE login
     sid = db.Column(db.String(255), nullable=True)   # Security Identifier (SID) locked on first EXE login
+    hwid_lock_enabled = db.Column(db.Boolean, default=True)  # True = 1-PC Lock, False = Multi-PC / Unlimited (Free)
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Reseller creator
     created_at = db.Column(db.DateTime, default=utc_now)
     
@@ -116,6 +117,7 @@ class LicenseKey(db.Model):
     expires_at = db.Column(db.DateTime, nullable=True)  # Calculated when activated
     hwid = db.Column(db.String(255), nullable=True)  # Hardware ID locked on first activation
     sid = db.Column(db.String(255), nullable=True)   # Security Identifier (SID) locked on first activation
+    hwid_lock_enabled = db.Column(db.Boolean, default=True)  # True = 1-PC Lock, False = Multi-PC / Unlimited (Free)
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Reseller creator
     created_at = db.Column(db.DateTime, default=utc_now)
     notes = db.Column(db.String(512), nullable=True)

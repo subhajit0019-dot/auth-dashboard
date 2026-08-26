@@ -62,6 +62,15 @@
       <input class="form-control" id="modal-custom-duration" type="datetime-local"/>
     </div>
 
+    <div class="form-group">
+      <label class="form-label">🔒 Hardware ID (HWID) Policy</label>
+      <select class="form-control" id="modal-hwid-lock-type">
+        <option value="true" selected>🔒 Locked to 1st PC (Strict 1-Device Lock)</option>
+        <option value="false">🔓 Unlocked (Unlimited Multi-PC / Free Access)</option>
+      </select>
+      <div class="text-xs text-muted mt-4">When Unlocked, multiple users can log in simultaneously with this account.</div>
+    </div>
+
     <div class="form-group" id="active-group" style="display:none;">
       <label class="form-label">Account Status</label>
       <select class="form-control" id="modal-active">
@@ -126,6 +135,15 @@
     <div class="form-group" id="lic-custom-duration-group" style="display:none;">
       <label class="form-label">Select Expiry Date</label>
       <input class="form-control" id="modal-lic-custom-duration" type="datetime-local"/>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">🔒 Hardware ID (HWID) Policy</label>
+      <select class="form-control" id="modal-lic-hwid-lock-type">
+        <option value="true" selected>🔒 Locked to 1st PC (Strict 1-Device Lock)</option>
+        <option value="false">🔓 Unlocked (Unlimited Multi-PC / Free Access)</option>
+      </select>
+      <div class="text-xs text-muted mt-4">When Unlocked, multiple PCs can activate and run using this license key simultaneously.</div>
     </div>
 
     <div class="form-group" id="lic-status-group" style="display:none;">
@@ -684,9 +702,9 @@ function renderUsers(users) {
       </td>
       <td class="text-sm text-muted">${esc(u.expires_at)}</td>
       <td>
-        <span class="text-xs ${u.hwid === 'Not Bound' ? 'text-muted' : 'key-mono'}">
-          ${esc(u.hwid)}
-        </span>
+        ${u.hwid_lock_enabled === false 
+          ? '<span class="badge" style="background:rgba(16,185,129,0.2);color:#10b981;border:1px solid rgba(16,185,129,0.4);">🔓 Multi-PC (Free)</span>' 
+          : `<span class="text-xs ${u.hwid === 'Not Bound' ? 'text-muted' : 'key-mono'}">${esc(u.hwid)}</span>`}
       </td>
       <td>
         <div style="display:flex;gap:6px;">
@@ -716,6 +734,7 @@ function openAddUserModal() {
   document.getElementById('pwd-hint').style.display = 'none';
   document.getElementById('modal-duration-type').value = '30d';
   document.getElementById('custom-duration-group').style.display = 'none';
+  document.getElementById('modal-hwid-lock-type').value = 'true';
   document.getElementById('active-group').style.display = 'none';
   document.getElementById('hwid-group').style.display = 'none';
   document.getElementById('modal-reset-hwid-flag').value = 'false';
@@ -729,6 +748,9 @@ function openEditUserModal(u) {
   document.getElementById('modal-password').value = '';
   document.getElementById('pwd-label').textContent = 'New Password (leave blank to keep)';
   document.getElementById('pwd-hint').style.display = 'block';
+  document.getElementById('modal-duration-type').value = '30d';
+  document.getElementById('custom-duration-group').style.display = 'none';
+  document.getElementById('modal-hwid-lock-type').value = u.hwid_lock_enabled === false ? 'false' : 'true';
   document.getElementById('active-group').style.display = 'block';
   document.getElementById('modal-active').value = u.is_active ? 'true' : 'false';
   document.getElementById('hwid-group').style.display = 'block';
@@ -749,6 +771,7 @@ async function saveUser() {
   const password = document.getElementById('modal-password').value;
   const durationType = document.getElementById('modal-duration-type').value;
   const customDate = document.getElementById('modal-custom-duration').value;
+  const hwidLock = document.getElementById('modal-hwid-lock-type').value === 'true';
   const isActive = document.getElementById('modal-active').value === 'true';
   const resetHwid = document.getElementById('modal-reset-hwid-flag').value === 'true';
 
@@ -763,6 +786,7 @@ async function saveUser() {
     password: password || undefined,
     duration_type: durationType,
     custom_duration: customDate,
+    hwid_lock_enabled: hwidLock,
     is_active: isActive,
     reset_hwid: resetHwid
   };
@@ -831,7 +855,11 @@ function renderLicenses(lics) {
         </span>
       </td>
       <td class="text-sm text-muted">${esc(l.expires_at)}</td>
-      <td><span class="text-xs ${l.hwid === 'Not Bound' ? 'text-muted' : 'key-mono'}">${esc(l.hwid)}</span></td>
+      <td>
+        ${l.hwid_lock_enabled === false 
+          ? '<span class="badge" style="background:rgba(16,185,129,0.2);color:#10b981;border:1px solid rgba(16,185,129,0.4);">🔓 Multi-PC (Free)</span>' 
+          : `<span class="text-xs ${l.hwid === 'Not Bound' ? 'text-muted' : 'key-mono'}">${esc(l.hwid)}</span>`}
+      </td>
       <td>
         <div style="display:flex;gap:6px;">
           <button class="btn btn-secondary btn-sm" onclick="openEditLicModal(${JSON.stringify(l).replace(/"/g,'&quot;')})">✏️ Edit</button>
@@ -868,6 +896,7 @@ function openAddLicModal() {
   document.getElementById('modal-lic-key').value = generateRandomKeyAuthString();
   document.getElementById('modal-lic-duration-type').value = '30d';
   document.getElementById('lic-custom-duration-group').style.display = 'none';
+  document.getElementById('modal-lic-hwid-lock-type').value = 'true';
   document.getElementById('lic-status-group').style.display = 'none';
   document.getElementById('lic-hwid-group').style.display = 'none';
   document.getElementById('modal-lic-reset-hwid-flag').value = 'false';
@@ -880,6 +909,7 @@ function openEditLicModal(l) {
   document.getElementById('modal-lic-key').value = l.key;
   document.getElementById('modal-lic-duration-type').value = '30d';
   document.getElementById('lic-custom-duration-group').style.display = 'none';
+  document.getElementById('modal-lic-hwid-lock-type').value = l.hwid_lock_enabled === false ? 'false' : 'true';
   document.getElementById('lic-status-group').style.display = 'block';
   document.getElementById('modal-lic-status').value = l.status.toLowerCase();
   document.getElementById('lic-hwid-group').style.display = 'block';
@@ -899,6 +929,7 @@ async function saveLicense() {
   const key = document.getElementById('modal-lic-key').value.trim();
   const durationType = document.getElementById('modal-lic-duration-type').value;
   const customDate = document.getElementById('modal-lic-custom-duration').value;
+  const hwidLock = document.getElementById('modal-lic-hwid-lock-type').value === 'true';
   const status = document.getElementById('modal-lic-status').value || 'active';
   const resetHwid = document.getElementById('modal-lic-reset-hwid-flag').value === 'true';
 
@@ -912,6 +943,7 @@ async function saveLicense() {
     key: key,
     duration_type: durationType,
     custom_duration: customDate,
+    hwid_lock_enabled: hwidLock,
     status: status,
     reset_hwid: resetHwid
   };

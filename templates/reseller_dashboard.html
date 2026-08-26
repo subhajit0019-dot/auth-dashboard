@@ -61,6 +61,15 @@
       <input class="form-control" id="r-modal-custom-duration" type="datetime-local"/>
     </div>
 
+    <div class="form-group">
+      <label class="form-label">🔒 Hardware ID (HWID) Policy</label>
+      <select class="form-control" id="r-modal-hwid-lock-type">
+        <option value="true" selected>🔒 Locked to 1st PC (Strict 1-Device Lock)</option>
+        <option value="false">🔓 Unlocked (Unlimited Multi-PC / Free Access)</option>
+      </select>
+      <div class="text-xs text-muted mt-4">When Unlocked, multiple users can log in simultaneously with this account.</div>
+    </div>
+
     <div class="form-group" id="r-user-hwid-group" style="display:none;">
       <label class="form-label">HWID Binding</label>
       <div class="flex-between">
@@ -118,6 +127,15 @@
     <div class="form-group" id="r-lic-custom-duration-group" style="display:none;">
       <label class="form-label">Select Expiry Date</label>
       <input class="form-control" id="r-modal-lic-custom-duration" type="datetime-local"/>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">🔒 Hardware ID (HWID) Policy</label>
+      <select class="form-control" id="r-modal-lic-hwid-lock-type">
+        <option value="true" selected>🔒 Locked to 1st PC (Strict 1-Device Lock)</option>
+        <option value="false">🔓 Unlocked (Unlimited Multi-PC / Free Access)</option>
+      </select>
+      <div class="text-xs text-muted mt-4">When Unlocked, multiple PCs can activate and run using this license key simultaneously.</div>
     </div>
 
     <div class="form-group" id="r-lic-hwid-group" style="display:none;">
@@ -681,7 +699,9 @@ function renderRUsers(users) {
         </span>
       </td>
       <td>
-        <span class="key-mono" style="font-size:11px;">${esc(u.hwid)}</span>
+        ${u.hwid_lock_enabled === false 
+          ? '<span class="badge" style="background:rgba(16,185,129,0.2);color:#10b981;border:1px solid rgba(16,185,129,0.4);">🔓 Multi-PC (Free)</span>' 
+          : `<span class="key-mono" style="font-size:11px;">${esc(u.hwid)}</span>`}
       </td>
       <td class="text-sm text-muted">${esc(u.created_at)}</td>
       <td>
@@ -714,6 +734,7 @@ function openAddRUserModal() {
   document.getElementById('r-modal-duration-type').value = '30d';
   document.getElementById('r-custom-duration-group').style.display = 'none';
   document.getElementById('r-modal-custom-duration').value = '';
+  document.getElementById('r-modal-hwid-lock-type').value = 'true';
   document.getElementById('r-user-hwid-group').style.display = 'none';
   document.getElementById('r-modal-reset-hwid-flag').value = 'false';
   document.getElementById('r-credit-cost-note').style.display = 'block';
@@ -730,6 +751,7 @@ function openEditRUserModal(u) {
   document.getElementById('r-modal-duration-type').value = '30d';
   document.getElementById('r-custom-duration-group').style.display = 'none';
   document.getElementById('r-modal-custom-duration').value = '';
+  document.getElementById('r-modal-hwid-lock-type').value = u.hwid_lock_enabled === false ? 'false' : 'true';
   document.getElementById('r-user-hwid-group').style.display = 'block';
   document.getElementById('r-modal-hwid-text').textContent = u.hwid || 'Not Bound';
   document.getElementById('r-modal-reset-hwid-flag').value = 'false';
@@ -749,6 +771,7 @@ async function saveResellerUser() {
   const password = document.getElementById('r-modal-password').value;
   const durationType = document.getElementById('r-modal-duration-type').value;
   const customDate = document.getElementById('r-modal-custom-duration').value;
+  const hwidLock = document.getElementById('r-modal-hwid-lock-type').value === 'true';
   const resetHwid = document.getElementById('r-modal-reset-hwid-flag').value === 'true';
 
   if (!id && !username) { showToast('Username is required.', 'warning'); return; }
@@ -758,7 +781,7 @@ async function saveResellerUser() {
   const btn = document.getElementById('r-save-user-btn');
   btn.disabled = true; btn.textContent = '⏳ Saving…';
 
-  const payload = { username, password, duration_type: durationType, custom_date: customDate, reset_hwid: resetHwid };
+  const payload = { username, password, duration_type: durationType, custom_date: customDate, hwid_lock_enabled: hwidLock, reset_hwid: resetHwid };
 
   try {
     let res;
@@ -827,7 +850,9 @@ function renderRLicenses(licenses) {
         <span class="badge badge-${l.status.toLowerCase()}">${esc(l.status)}</span>
       </td>
       <td>
-        <span class="key-mono" style="font-size:11px;">${esc(l.hwid)}</span>
+        ${l.hwid_lock_enabled === false 
+          ? '<span class="badge" style="background:rgba(16,185,129,0.2);color:#10b981;border:1px solid rgba(16,185,129,0.4);">🔓 Multi-PC (Free)</span>' 
+          : `<span class="key-mono" style="font-size:11px;">${esc(l.hwid)}</span>`}
       </td>
       <td class="text-sm text-muted">${esc(l.created_at)}</td>
       <td>
@@ -857,6 +882,7 @@ function openAddRLicModal() {
   document.getElementById('r-modal-lic-duration-type').value = '30d';
   document.getElementById('r-lic-custom-duration-group').style.display = 'none';
   document.getElementById('r-modal-lic-custom-duration').value = '';
+  document.getElementById('r-modal-lic-hwid-lock-type').value = 'true';
   document.getElementById('r-lic-hwid-group').style.display = 'none';
   document.getElementById('r-modal-lic-reset-hwid-flag').value = 'false';
   document.getElementById('r-lic-cost-note').style.display = 'block';
@@ -870,6 +896,7 @@ function openEditRLicModal(l) {
   document.getElementById('r-modal-lic-duration-type').value = '30d';
   document.getElementById('r-lic-custom-duration-group').style.display = 'none';
   document.getElementById('r-modal-lic-custom-duration').value = '';
+  document.getElementById('r-modal-lic-hwid-lock-type').value = l.hwid_lock_enabled === false ? 'false' : 'true';
   document.getElementById('r-lic-hwid-group').style.display = 'block';
   document.getElementById('r-modal-lic-hwid-text').textContent = l.hwid || 'Not Bound';
   document.getElementById('r-modal-lic-reset-hwid-flag').value = 'false';
@@ -888,6 +915,7 @@ async function saveResellerLicense() {
   const key = document.getElementById('r-modal-lic-key').value.trim();
   const durationType = document.getElementById('r-modal-lic-duration-type').value;
   const customDate = document.getElementById('r-modal-lic-custom-duration').value;
+  const hwidLock = document.getElementById('r-modal-lic-hwid-lock-type').value === 'true';
   const resetHwid = document.getElementById('r-modal-lic-reset-hwid-flag').value === 'true';
 
   if (!key) { showToast('License key is required.', 'warning'); return; }
@@ -896,7 +924,7 @@ async function saveResellerLicense() {
   const btn = document.getElementById('r-save-lic-btn');
   btn.disabled = true; btn.textContent = '⏳ Saving…';
 
-  const payload = { custom_key: key, key: key, duration_type: durationType, custom_date: customDate, reset_hwid: resetHwid };
+  const payload = { custom_key: key, key: key, duration_type: durationType, custom_date: customDate, hwid_lock_enabled: hwidLock, reset_hwid: resetHwid };
 
   try {
     let res;
