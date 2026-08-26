@@ -32,6 +32,17 @@ app = Flask(
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max payload to prevent memory-exhaustion DoS
 
+# Cookie Hardening & Cloaking (Hidden from JavaScript, HTTPS only, Disguised names)
+app.config['SESSION_COOKIE_NAME'] = '__cf_bm_sess'   # Disguised cookie name
+app.config['SESSION_COOKIE_HTTPONLY'] = True         # 100% hidden from JS/XSS
+app.config['SESSION_COOKIE_SECURE'] = True           # Transmitted only over HTTPS
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'        # Anti-CSRF protection
+app.config['REMEMBER_COOKIE_NAME'] = '__cf_uid'      # Disguised remember token
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SECURE'] = True
+app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=7)
+
 # Database configuration (Supports Vercel serverless /tmp or remote PostgreSQL like Neon/Supabase)
 if (os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME')) and not os.environ.get('DATABASE_URL'):
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/auth.db'
@@ -195,11 +206,23 @@ def security_and_ddos_filter():
 
 @app.after_request
 def add_security_headers(response):
+    # Remove revealing server & technology headers
+    response.headers.pop('Server', None)
+    response.headers.pop('X-Powered-By', None)
+
+    # Security & Anti-Inspection Armor
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['X-DDoS-Protection'] = 'Active-Shield-v2'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+    # Prevent sensitive dashboard & auth caching in browser memory
+    if request.path.startswith('/admin') or request.path.startswith('/reseller') or request.path.startswith('/api'):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+
     return response
 
 login_manager = LoginManager(app)
