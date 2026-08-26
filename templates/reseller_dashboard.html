@@ -235,7 +235,7 @@
     </nav>
 
     <div class="sidebar-footer">
-      <a href="{{ url_for('logout') }}" class="btn btn-danger btn-block" style="text-decoration:none;">
+      <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-block" style="text-decoration:none;font-size:var(--text-sm);">
         🚪 Sign Out
       </a>
     </div>
@@ -274,12 +274,12 @@
         </div>
       </div>
 
-      <!-- Quick Actions Card (Harmonized Hierarchy) -->
-      <div class="card mb-24">
-        <div class="card-title"><span>⚡</span> Quick Actions</div>
+      <!-- Quick Actions Card (Compact & Harmonized) -->
+      <div class="card mb-20" style="padding:14px 18px;">
+        <div class="card-title" style="margin-bottom:10px;"><span>⚡</span> Quick Actions</div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn btn-primary" onclick="openAddRUserModal()">➕ Create App User (1 Credit)</button>
-          <button class="btn btn-secondary" onclick="openAddRLicModal()">🔑 Generate License Key (1 Credit)</button>
+          <button class="btn btn-primary" onclick="openAddRLicModal()">🔑 Generate License Key (1 Credit)</button>
           <button class="btn btn-secondary" onclick="switchTab('api-docs')">📖 Bot API Docs</button>
           <button class="btn btn-secondary" onclick="switchTab('reset')">🔄 HWID Reset Portal</button>
         </div>
@@ -372,22 +372,23 @@
     <section id="tab-api-docs" class="tab-section hidden">
       <div class="section-header">
         <div class="section-title">API Documentation &amp; Bot Integration</div>
-        <div class="section-sub">Integrate your reseller key into Telegram bots, Discord bots, or websites</div>
+        <div class="section-sub">Integrate your reseller key into Telegram bots, Discord bots, or custom panels</div>
       </div>
 
       <!-- Your API Access Key Card -->
       <div class="card mb-24">
-        <div class="card-title" style="font-size:16px;font-weight:700;margin-bottom:12px;">Your API Access Key</div>
-        <div class="form-group mb-8">
-          <label class="form-label" style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">API Key</label>
-          <div class="flex-gap">
-            <input class="form-control key-mono" id="r-api-key-input" value="{{ user.api_key }}" readonly style="flex:1;background:rgba(255,255,255,0.03);color:#e4e4e7;letter-spacing:1px;font-size:13px;border-radius:8px;"/>
-            <button type="button" class="btn btn-secondary" style="border-radius:8px;padding:0 20px;" onclick="copyText(document.getElementById('r-api-key-input').value, 'API Key copied to clipboard!')">Copy</button>
+        <div class="card-title"><span>🔑</span> Your API Access Key</div>
+        <div class="form-group mb-12">
+          <label class="form-label">Active API Key</label>
+          <div style="display:flex;max-width:560px;align-items:stretch;">
+            <div style="display:flex;align-items:center;padding:0 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-right:none;border-radius:var(--radius-md) 0 0 var(--radius-md);color:var(--color-text-muted);font-size:var(--text-sm);">🔒</div>
+            <input class="form-control key-mono" id="r-api-key-input" value="{{ user.api_key }}" readonly style="flex:1;background:rgba(255,255,255,0.02);color:var(--color-text-primary);letter-spacing:1px;font-size:var(--text-xs);border-radius:0;border-left:none;cursor:default;"/>
+            <button type="button" class="btn btn-secondary" style="border-radius:0 var(--radius-md) var(--radius-md) 0;border-left:none;" onclick="copyText(document.getElementById('r-api-key-input').value, 'API Key copied to clipboard!')">📋 Copy</button>
           </div>
-          <div class="text-xs text-muted mt-8">Use this key to authorize requests to the external API endpoints. Keep it confidential.</div>
+          <div class="text-xs text-muted mt-8">Use this key to authorize requests to external endpoints. Keep it confidential.</div>
         </div>
-        <div style="margin-top:16px;">
-          <button type="button" class="btn btn-secondary" id="r-reset-key-btn" style="background:#09090b;color:#f4f4f5;border:1px solid #27272a;border-radius:8px;font-size:13px;padding:8px 16px;" onclick="resetResellerApiKey()">
+        <div>
+          <button type="button" class="btn btn-secondary btn-sm" id="r-reset-key-btn" onclick="resetResellerApiKey()">
             🔄 Reset API Key
           </button>
         </div>
@@ -395,31 +396,32 @@
 
       <!-- Remote API Documentation Guide -->
       <div class="card mb-24">
-        <div class="card-title" style="font-size:16px;font-weight:700;margin-bottom:6px;">API Documentation</div>
+        <div class="card-title"><span>📖</span> API Endpoint &amp; Action Guide</div>
         <div class="text-sm text-muted mb-16">
-          Integrate our high-performance authentication &amp; key generation API into your own Telegram / Discord bot code.
+          Integrate key generation and user authentication directly into your custom Telegram / Discord bot code.
         </div>
 
-        <div style="font-size:14px;font-weight:600;margin-bottom:8px;color:#fff;">API Endpoint &amp; Action Guide</div>
-
-        <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:#a1a1aa;margin-bottom:20px;">
-          <span style="color:#38bdf8;">GET / POST</span> {{ base_url }}/api/v1/manage<br/>
-          <span style="color:#38bdf8;">GET / POST</span> {{ base_url }}/api/v1/manage?key=&lt;action&gt;&amp;...<br/><br/>
-          <span style="color:#f4f4f5;">Parameters:</span><br/>
-          - <span style="color:#a78bfa;">key</span>: Your API Key (e.g. <span style="color:#e4e4e7;" id="r-doc-key-preview">{{ user.api_key }}</span>)<br/>
-          - <span style="color:#a78bfa;">action</span>: <span style="color:#34d399;">'add'</span>, <span style="color:#34d399;">'add_license'</span>, <span style="color:#34d399;">'reset_hwid'</span>, <span style="color:#34d399;">'update'</span>, <span style="color:#34d399;">'status'</span>, <span style="color:#34d399;">'remove'</span><br/>
-          - <span style="color:#a78bfa;">username</span> / <span style="color:#a78bfa;">uid</span>: App username (1-char to unlimited letters)<br/>
-          - <span style="color:#a78bfa;">password</span>: App password (1-char to unlimited letters)<br/>
-          - <span style="color:#a78bfa;">license_key</span>: (Optional) Custom license string or auto-generated<br/>
-          - <span style="color:#a78bfa;">duration</span>: Number of days (1-365, required for 'add' or 'update')
+        <div style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;font-family:'JetBrains Mono',monospace;font-size:var(--text-xs);line-height:1.7;color:var(--color-text-secondary);margin-bottom:20px;">
+          <span style="color:var(--color-text-accent);font-weight:600;">GET / POST</span> {{ base_url }}/api/v1/manage<br/>
+          <span style="color:var(--color-text-accent);font-weight:600;">GET / POST</span> {{ base_url }}/api/v1/manage?key=&lt;action&gt;&amp;...<br/><br/>
+          <span style="color:var(--color-text-primary);font-weight:600;">Parameters:</span><br/>
+          - <span style="color:var(--purple-light);">key</span>: Reseller API Key (<code id="r-doc-key-preview" style="font-size:11px;color:var(--color-text-accent);background:rgba(6,182,212,0.1);padding:1px 5px;border-radius:4px;">{{ user.api_key[:12] }}…{{ user.api_key[-4:] }}</code>)<br/>
+          - <span style="color:var(--purple-light);">action</span>: <span style="color:var(--color-text-success);">'add'</span>, <span style="color:var(--color-text-success);">'add_license'</span>, <span style="color:var(--color-text-success);">'reset_hwid'</span>, <span style="color:var(--color-text-success);">'update'</span>, <span style="color:var(--color-text-success);">'status'</span>, <span style="color:var(--color-text-success);">'remove'</span><br/>
+          - <span style="color:var(--purple-light);">username</span> / <span style="color:var(--purple-light);">uid</span>: App username<br/>
+          - <span style="color:var(--purple-light);">password</span>: App password<br/>
+          - <span style="color:var(--purple-light);">license_key</span>: (Optional) Custom license string<br/>
+          - <span style="color:var(--purple-light);">duration</span>: Number of days (1–365, required for add/update)
         </div>
 
-        <div class="card-title" style="font-size:14px;font-weight:600;margin-bottom:12px;">Live Endpoints Pre-filled With Your API Key</div>
+        <div class="card-title"><span>⚡</span> Live Endpoints Pre-filled With Your API Key</div>
         
         <!-- Action 1 -->
         <div style="margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;">
-          <div class="text-sm fw-600 mb-6" style="color:var(--green);">1. Add App User (Telegram Bot / Script) — Cost: 1 Credit</div>
-          <div class="reset-link-box" style="font-size:12px;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+            <div style="font-weight:600;font-size:var(--text-sm);color:var(--color-text-primary);">1. Add App User (Telegram Bot / Script)</div>
+            <span class="badge" style="background:rgba(16,185,129,0.15);color:var(--color-text-success);border:1px solid rgba(16,185,129,0.3);">💳 Cost: 1 Credit</span>
+          </div>
+          <div class="reset-link-box" style="margin-bottom:8px;">
             <span>🌐</span>
             <span id="r-url-add-user">{{ base_url }}/api/v1/manage?key={{ user.api_key }}&action=add&username=Shubhajit&password=1&duration=30</span>
           </div>
@@ -428,8 +430,11 @@
 
         <!-- Action 2 -->
         <div style="margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;">
-          <div class="text-sm fw-600 mb-6" style="color:var(--cyan-light);">2. Generate License Key — Cost: 1 Credit</div>
-          <div class="reset-link-box" style="font-size:12px;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+            <div style="font-weight:600;font-size:var(--text-sm);color:var(--color-text-primary);">2. Generate License Key</div>
+            <span class="badge" style="background:rgba(6,182,212,0.15);color:var(--color-text-accent);border:1px solid rgba(6,182,212,0.3);">💳 Cost: 1 Credit</span>
+          </div>
+          <div class="reset-link-box" style="margin-bottom:8px;">
             <span>🌐</span>
             <span id="r-url-add-lic">{{ base_url }}/api/v1/manage?key={{ user.api_key }}&action=add_license&duration=30</span>
           </div>
@@ -438,8 +443,11 @@
 
         <!-- Action 3 -->
         <div style="margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:14px;">
-          <div class="text-sm fw-600 mb-6" style="color:var(--yellow);">3. Reset User HWID Lock &amp; Activation (Free)</div>
-          <div class="reset-link-box" style="font-size:12px;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+            <div style="font-weight:600;font-size:var(--text-sm);color:var(--color-text-primary);">3. Reset User HWID Lock &amp; Activation</div>
+            <span class="badge" style="background:rgba(255,255,255,0.05);color:var(--color-text-muted);border:1px solid var(--border);">Free</span>
+          </div>
+          <div class="reset-link-box" style="margin-bottom:8px;">
             <span>🌐</span>
             <span id="r-url-reset-hwid">{{ base_url }}/api/v1/manage?key={{ user.api_key }}&action=reset_hwid&username=Shubhajit</span>
           </div>
@@ -448,8 +456,11 @@
 
         <!-- Action 4 -->
         <div>
-          <div class="text-sm fw-600 mb-6" style="color:var(--purple-light);">4. Check User Subscription Status &amp; Time Left</div>
-          <div class="reset-link-box" style="font-size:12px;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+            <div style="font-weight:600;font-size:var(--text-sm);color:var(--color-text-primary);">4. Check User Subscription Status &amp; Time Left</div>
+            <span class="badge" style="background:rgba(255,255,255,0.05);color:var(--color-text-muted);border:1px solid var(--border);">Free</span>
+          </div>
+          <div class="reset-link-box" style="margin-bottom:8px;">
             <span>🌐</span>
             <span id="r-url-status">{{ base_url }}/api/v1/manage?key={{ user.api_key }}&action=status&username=Shubhajit</span>
           </div>
@@ -462,43 +473,41 @@
     <!-- ─── 5. ALL USER / LICENCE RESET LINK ─────────────── -->
     <section id="tab-reset" class="tab-section hidden">
       <div class="section-header">
-        <div class="section-title">5. Client Self-Service HWID Reset Portal</div>
-        <div class="section-sub">Share your public link with customers so they can reset their own HWID lock anytime</div>
+        <div class="section-title">Client Self-Service HWID Reset Portal</div>
+        <div class="section-sub">Share your public portal link so clients can reset their HWID lock instantly</div>
       </div>
 
       <!-- Card 1: Your Public Reset Portal Link (For Customers) -->
-      <div class="card mb-24" style="background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(6,182,212,0.08));border:1px solid rgba(124,58,237,0.3);">
-        <div class="card-title" style="font-size:16px;font-weight:700;color:#fff;margin-bottom:8px;">
-          <span>🔗</span> Your Dedicated Client HWID Reset Portal Link
+      <div class="card mb-24" style="background:linear-gradient(135deg,rgba(124,58,237,0.12),rgba(6,182,212,0.06));border:1px solid rgba(124,58,237,0.25);">
+        <div class="card-title">
+          <span>🔗</span> Dedicated Client HWID Reset Portal Link
         </div>
         <div class="text-sm text-muted mb-16">
-          Send this link to your clients / buyers. When they open it in their browser, they only need to enter their <strong>App Username</strong> and their HWID lock will automatically reset!
+          Send this link to your clients. Entering their username resets their HWID lock automatically.
         </div>
 
         <div class="form-group mb-12">
-          <label class="form-label" style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">Public Reset Portal URL</label>
-          <div class="reset-link-box" style="font-size:13px;padding:12px 16px;margin-bottom:12px;">
-            <span>🌐</span>
-            <span id="r-portal-url-display" style="word-break:break-all;font-weight:600;color:var(--cyan-light);">
+          <label class="form-label">Public Reset Portal URL</label>
+          <div style="display:flex;max-width:680px;align-items:stretch;margin-bottom:12px;">
+            <div style="display:flex;align-items:center;padding:0 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-right:none;border-radius:var(--radius-md) 0 0 var(--radius-md);color:var(--color-text-muted);">🌐</div>
+            <code id="r-portal-url-display" style="flex:1;display:flex;align-items:center;padding:8px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-left:none;border-right:none;font-family:'JetBrains Mono',monospace;font-size:var(--text-xs);color:var(--color-text-accent);word-break:break-all;user-select:all;">
               {{ base_url }}/portal/reset/{{ user.reset_portal_token }}
-            </span>
+            </code>
+            <button type="button" class="btn btn-secondary" style="border-radius:0 var(--radius-md) var(--radius-md) 0;border-left:none;" onclick="copyText(document.getElementById('r-portal-url-display').textContent.trim(), 'Public Reset Portal Link copied!')">📋 Copy Link</button>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="btn btn-primary" onclick="copyText(document.getElementById('r-portal-url-display').textContent.trim(), 'Public Reset Portal Link copied!')">
-              📋 Copy Public Reset Link
-            </button>
-            <a href="{{ base_url }}/portal/reset/{{ user.reset_portal_token }}" target="_blank" class="btn btn-secondary" style="text-decoration:none;">
+            <a href="{{ base_url }}/portal/reset/{{ user.reset_portal_token }}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">
               👁️ Open Portal Preview
             </a>
-            <button class="btn btn-secondary" id="r-regen-portal-btn" onclick="regeneratePortalToken()">
-              🔄 Regenerate Portal Token
+            <button class="btn btn-secondary btn-sm" id="r-regen-portal-btn" onclick="regeneratePortalToken()">
+              🔄 Regenerate Token
             </button>
           </div>
         </div>
       </div>
 
       <!-- Card 2: Manual Reseller User Management Override -->
-      <div class="section-title" style="font-size:18px;margin-bottom:12px;color:#fff;">Manual User Reset Override</div>
+      <div class="card-title mb-12"><span>⚙️</span> Manual User Reset Override</div>
 
       <!-- User selection -->
       <div class="card mb-24">
@@ -554,10 +563,10 @@
 
       </div>
 
-      <div id="r-reset-placeholder" class="card" style="text-align:center;padding:60px 24px;">
-        <div style="font-size:52px;margin-bottom:12px;">🔄</div>
-        <div style="font-size:17px;font-weight:600;margin-bottom:8px;">Select a Client User Above</div>
-        <div class="text-2">Choose a client user to manually update password, duration, or clear HWID lock.</div>
+      <div id="r-reset-placeholder" class="card" style="text-align:center;padding:24px 16px;">
+        <div style="font-size:28px;margin-bottom:8px;">🔄</div>
+        <div style="font-size:var(--text-base);font-weight:600;color:var(--color-text-primary);margin-bottom:4px;">Select a Client User Above</div>
+        <div class="text-sm text-muted">Choose a client user to update password, duration, or clear HWID lock.</div>
       </div>
     </section>
 
