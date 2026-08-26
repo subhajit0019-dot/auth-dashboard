@@ -279,7 +279,7 @@
     </nav>
 
     <div class="sidebar-footer">
-      <a href="{{ url_for('logout') }}" class="btn btn-danger btn-block" style="text-decoration:none;">
+      <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-block" style="text-decoration:none;font-size:var(--text-sm);">
         🚪 Sign Out
       </a>
     </div>
@@ -709,7 +709,7 @@ function renderUsers(users) {
       <td>
         <div style="display:flex;gap:6px;">
           <button class="btn btn-secondary btn-sm" onclick="openEditUserModal(${JSON.stringify(u).replace(/"/g,'&quot;')})">✏️ Edit</button>
-          <button class="btn btn-danger btn-sm" onclick="confirmDeleteUser(${u.id},'${esc(u.username)}')">🗑</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteUser(${u.id},'${esc(u.username)}')">🗑 Delete</button>
         </div>
       </td>
     </tr>`).join('');
@@ -863,7 +863,7 @@ function renderLicenses(lics) {
       <td>
         <div style="display:flex;gap:6px;">
           <button class="btn btn-secondary btn-sm" onclick="openEditLicModal(${JSON.stringify(l).replace(/"/g,'&quot;')})">✏️ Edit</button>
-          <button class="btn btn-danger btn-sm" onclick="confirmDeleteLic(${l.id},'${esc(l.key)}')">🗑</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteLic(${l.id},'${esc(l.key)}')">🗑 Delete</button>
         </div>
       </td>
     </tr>`).join('');

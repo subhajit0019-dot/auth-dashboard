@@ -486,87 +486,92 @@
           Send this link to your clients. Entering their username resets their HWID lock automatically.
         </div>
 
-        <div class="form-group mb-12">
+        <div class="form-group mb-4">
           <label class="form-label">Public Reset Portal URL</label>
-          <div style="display:flex;max-width:680px;align-items:stretch;margin-bottom:12px;">
-            <div style="display:flex;align-items:center;padding:0 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-right:none;border-radius:var(--radius-md) 0 0 var(--radius-md);color:var(--color-text-muted);">🌐</div>
-            <code id="r-portal-url-display" style="flex:1;display:flex;align-items:center;padding:8px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-left:none;border-right:none;font-family:'JetBrains Mono',monospace;font-size:var(--text-xs);color:var(--color-text-accent);word-break:break-all;user-select:all;">
-              {{ base_url }}/portal/reset/{{ user.reset_portal_token }}
-            </code>
-            <button type="button" class="btn btn-secondary" style="border-radius:0 var(--radius-md) var(--radius-md) 0;border-left:none;" onclick="copyText(document.getElementById('r-portal-url-display').textContent.trim(), 'Public Reset Portal Link copied!')">📋 Copy Link</button>
-          </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <a href="{{ base_url }}/portal/reset/{{ user.reset_portal_token }}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">
-              👁️ Open Portal Preview
-            </a>
-            <button class="btn btn-secondary btn-sm" id="r-regen-portal-btn" onclick="regeneratePortalToken()">
-              🔄 Regenerate Token
-            </button>
+          <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;max-width:760px;">
+            <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+              <span>🌐</span>
+              <code id="r-portal-url-display" style="font-family:'JetBrains Mono',monospace;font-size:var(--text-xs);color:var(--color-text-accent);word-break:break-all;user-select:all;">
+                {{ base_url }}/portal/reset/{{ user.reset_portal_token }}
+              </code>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+              <button class="btn btn-primary btn-sm" onclick="copyText(document.getElementById('r-portal-url-display').textContent.trim(), 'Public Reset Portal Link copied!')">
+                📋 Copy Link
+              </button>
+              <a href="{{ base_url }}/portal/reset/{{ user.reset_portal_token }}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">
+                👁️ Preview
+              </a>
+              <button class="btn btn-secondary btn-sm" id="r-regen-portal-btn" onclick="regeneratePortalToken()">
+                🔄 Regenerate
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Card 2: Manual Reseller User Management Override -->
-      <div class="card-title mb-12"><span>⚙️</span> Manual User Reset Override</div>
-
-      <!-- User selection -->
+      <!-- Card 2: Manual Reseller User Management Override (Consolidated) -->
       <div class="card mb-24">
-        <div class="card-title"><span>👤</span> Select Client User</div>
-        <div class="flex-gap" style="flex-wrap:wrap;">
-          <select class="form-control" id="r-reset-user-select" style="max-width:340px;" onchange="onRResetUserChange()">
-            <option value="">— Choose a user account —</option>
-          </select>
-          <div id="r-selected-user-badge" class="hidden">
-            <span class="badge badge-active" id="r-selected-user-name"></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Actions Grid -->
-      <div class="grid-3" id="r-reset-actions" style="display:none;">
-
-        <!-- Reset Password -->
-        <div class="card">
-          <div class="card-title"><span>🔒</span> Reset Password</div>
-          <div class="form-group">
-            <label class="form-label">New Password (Any length)</label>
-            <input class="form-control" id="r-reset-pwd" type="password" placeholder="Enter new password"/>
-          </div>
-          <button class="btn btn-primary btn-block mt-16" onclick="doRReset('password')">🔒 Update Password</button>
-        </div>
-
-        <!-- Extend Duration -->
-        <div class="card">
-          <div class="card-title"><span>⏱️</span> Set Subscription Duration</div>
-          <div class="form-group">
-            <label class="form-label">Select Duration</label>
-            <select class="form-control" id="r-reset-duration-select">
-              <option value="1d">1 Day</option>
-              <option value="7d">7 Days</option>
-              <option value="30d" selected>30 Days</option>
-              <option value="90d">90 Days</option>
-              <option value="365d">365 Days</option>
-              <option value="lifetime">♾️ Lifetime</option>
+        <div class="card-title"><span>⚙️</span> Manual User Reset Override</div>
+        <div class="form-group mb-16">
+          <label class="form-label">Select Client User</label>
+          <div class="flex-gap" style="flex-wrap:wrap;">
+            <select class="form-control" id="r-reset-user-select" style="max-width:360px;" onchange="onRResetUserChange()">
+              <option value="">— Choose a user account —</option>
             </select>
+            <div id="r-selected-user-badge" class="hidden">
+              <span class="badge badge-active" id="r-selected-user-name"></span>
+            </div>
           </div>
-          <button class="btn btn-primary btn-block mt-16" onclick="doRReset('duration')">⏱️ Update Duration</button>
         </div>
 
-        <!-- Reset HWID -->
-        <div class="card">
-          <div class="card-title"><span>💻</span> Reset HWID Lock</div>
-          <div class="alert alert-info mb-16">
-            Clears hardware lock so user can login from a new PC.
+        <!-- Actions Grid (shown when user selected) -->
+        <div class="grid-3" id="r-reset-actions" style="display:none;margin-top:16px;">
+
+          <!-- Reset Password -->
+          <div class="card" style="background:rgba(255,255,255,0.02);">
+            <div class="card-title"><span>🔒</span> Reset Password</div>
+            <div class="form-group">
+              <label class="form-label">New Password (Any length)</label>
+              <input class="form-control" id="r-reset-pwd" type="password" placeholder="Enter new password"/>
+            </div>
+            <button class="btn btn-primary btn-block mt-16" onclick="doRReset('password')">🔒 Update Password</button>
           </div>
-          <button class="btn btn-secondary btn-block mt-16" onclick="doRReset('hwid')">🔄 Clear HWID Lock</button>
+
+          <!-- Extend Duration -->
+          <div class="card" style="background:rgba(255,255,255,0.02);">
+            <div class="card-title"><span>⏱️</span> Set Subscription Duration</div>
+            <div class="form-group">
+              <label class="form-label">Select Duration</label>
+              <select class="form-control" id="r-reset-duration-select">
+                <option value="1d">1 Day</option>
+                <option value="7d">7 Days</option>
+                <option value="30d" selected>30 Days</option>
+                <option value="90d">90 Days</option>
+                <option value="365d">365 Days</option>
+                <option value="lifetime">♾️ Lifetime</option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-block mt-16" onclick="doRReset('duration')">⏱️ Update Duration</button>
+          </div>
+
+          <!-- Reset HWID -->
+          <div class="card" style="background:rgba(255,255,255,0.02);">
+            <div class="card-title"><span>💻</span> Reset HWID Lock</div>
+            <div class="alert alert-info mb-16">
+              Clears hardware lock so user can login from a new PC.
+            </div>
+            <button class="btn btn-secondary btn-block mt-16" onclick="doRReset('hwid')">🔄 Clear HWID Lock</button>
+          </div>
+
         </div>
 
-      </div>
-
-      <div id="r-reset-placeholder" class="card" style="text-align:center;padding:24px 16px;">
-        <div style="font-size:28px;margin-bottom:8px;">🔄</div>
-        <div style="font-size:var(--text-base);font-weight:600;color:var(--color-text-primary);margin-bottom:4px;">Select a Client User Above</div>
-        <div class="text-sm text-muted">Choose a client user to update password, duration, or clear HWID lock.</div>
+        <!-- Compact Empty State (shown when no user selected) -->
+        <div id="r-reset-placeholder" style="text-align:center;padding:20px 16px;background:rgba(255,255,255,0.02);border:1px dashed var(--border);border-radius:var(--radius-md);">
+          <div style="font-size:24px;margin-bottom:6px;">👤</div>
+          <div style="font-size:var(--text-base);font-weight:600;color:var(--color-text-primary);margin-bottom:2px;">Select a Client User Above</div>
+          <div class="text-xs text-muted">Choose an account from the dropdown to modify credentials or reset HWID.</div>
+        </div>
       </div>
     </section>
 
