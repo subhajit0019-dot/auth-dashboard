@@ -149,16 +149,69 @@ ddos_shield = AntiDDoSShield()
 
 _db_initialized = False
 
+def ensure_db_schema():
+    try:
+        db.create_all()
+    except Exception as e:
+        print(f"[!] create_all error: {e}")
+
+    try:
+        engine = db.engine
+        with engine.connect() as conn:
+            # 1. users table auto-migration
+            for col, col_type in [
+                ('hwid_lock_enabled', 'BOOLEAN DEFAULT TRUE'),
+                ('sid', 'VARCHAR(255)'),
+                ('reset_portal_token', 'VARCHAR(100)'),
+                ('panel_name', 'VARCHAR(255)'),
+                ('credits', 'INTEGER DEFAULT 0'),
+                ('is_paused', 'BOOLEAN DEFAULT FALSE'),
+                ('duration_days', 'FLOAT'),
+                ('activated_at', 'TIMESTAMP'),
+                ('expires_at', 'TIMESTAMP')
+            ]:
+                try:
+                    conn.execute(db.text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {col_type};"))
+                    conn.commit()
+                except Exception:
+                    try:
+                        conn.execute(db.text(f"ALTER TABLE users ADD COLUMN {col} {col_type};"))
+                        conn.commit()
+                    except Exception:
+                        pass
+
+            # 2. license_keys table auto-migration
+            for col, col_type in [
+                ('hwid_lock_enabled', 'BOOLEAN DEFAULT TRUE'),
+                ('sid', 'VARCHAR(255)'),
+                ('duration_days', 'FLOAT'),
+                ('activated_at', 'TIMESTAMP'),
+                ('expires_at', 'TIMESTAMP'),
+                ('notes', 'VARCHAR(512)')
+            ]:
+                try:
+                    conn.execute(db.text(f"ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS {col} {col_type};"))
+                    conn.commit()
+                except Exception:
+                    try:
+                        conn.execute(db.text(f"ALTER TABLE license_keys ADD COLUMN {col} {col_type};"))
+                        conn.commit()
+                    except Exception:
+                        pass
+    except Exception as e:
+        print(f"[!] Auto-migrate error: {e}")
+
+
 @app.before_request
 def security_and_ddos_filter():
     global _db_initialized
     if not _db_initialized:
+        ensure_db_schema()
         try:
-            db.create_all()
             seed_database()
             _db_initialized = True
         except Exception as e:
-            print(f"[!] DB init error: {e}")
+            print(f"[!] DB seed error: {e}")
 
     # Allow static assets without strict rate limiting
     if request.path.startswith('/static/'):
@@ -225,12 +278,13 @@ def add_security_headers(response):
         response.headers['Expires'] = '0'
 
     # Dynamically minify HTML output to strip readable indentation and comments
-    if response.content_type and 'text/html' in response.content_type:
+    if response.status_code == 200 and response.content_type and 'text/html' in response.content_type:
         try:
             html_text = response.get_data(as_text=True)
-            html_text = re.sub(r'<!--(?!\[if)[\s\S]*?-->', '', html_text)
-            html_text = re.sub(r'\s+', ' ', html_text)
-            response.set_data(html_text)
+            if html_text:
+                html_text = re.sub(r'<!--(?!\[if)[\s\S]*?-->', '', html_text)
+                html_text = re.sub(r'\s+', ' ', html_text)
+                response.set_data(html_text)
         except Exception:
             pass
 
