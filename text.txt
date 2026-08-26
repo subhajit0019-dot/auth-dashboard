@@ -1,0 +1,14 @@
+reseller/coustum exe dashboard
+1. overview
+2. user/pass
+3. licence key
+4. api docs
+5. all user/licence reset link
+
+admin dashboard
+1. overview
+2. user/pass
+3. licence key
+4. api docs
+5. all user/licence reset link
+6. reseller/coustum exe maker

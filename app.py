@@ -21,7 +21,16 @@ from models import (db, User, LicenseKey, ApiDoc, ResetToken, AuditLog,
 # ---------------------------------------------------------------------------
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///auth.db'
+
+# Database configuration (Supports Vercel serverless /tmp or remote PostgreSQL like Neon/Supabase)
+if os.environ.get('VERCEL') and not os.environ.get('DATABASE_URL'):
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/auth.db'
+else:
+    db_uri = os.environ.get('DATABASE_URL', 'sqlite:///auth.db')
+    if db_uri and db_uri.startswith('postgres://'):
+        db_uri = db_uri.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
