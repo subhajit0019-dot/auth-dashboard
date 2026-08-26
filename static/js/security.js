@@ -1,63 +1,9 @@
-/**
- * Advanced Client-Side Security Armor & Anti-Inspection Shield
- * Disables DevTools, Right-Click, Source Shortcuts & Debugging
- */
-(function() {
-  'use strict';
-
-  // 1. Disable Right Click Context Menu
-  document.addEventListener('contextmenu', function(e) {
-    e.preventDefault();
-    return false;
-  }, { capture: true });
-
-  // 2. Disable Keyboard Shortcuts (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S)
-  document.addEventListener('keydown', function(e) {
-    // F12
-    if (e.key === 'F12' || e.keyCode === 123) {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    }
-    // Ctrl + Shift + I / J / C
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c' || e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    }
-    // Ctrl + U (View Source)
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u' || e.keyCode === 85)) {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    }
-    // Ctrl + S (Save Page)
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'S' || e.key === 's' || e.keyCode === 83)) {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    }
-  }, { capture: true });
-
-  // 3. Neutralize Console & Logs
-  try {
-    const noop = function() {};
-    const methods = ['log', 'debug', 'info', 'warn', 'error', 'table', 'dir', 'trace'];
-    for (let i = 0; i < methods.length; i++) {
-      window.console[methods[i]] = noop;
-    }
-    setInterval(function() {
-      try { window.console.clear(); } catch(e) {}
-    }, 1500);
-  } catch(e) {}
-
-  // 4. Anti-Debugging Loop (Freezes DevTools Sources tab if opened)
-  setInterval(function() {
-    try {
-      (function() {
-        return false;
-      })['constructor']('debugger')();
-    } catch(err) {}
-  }, 350);
-
-})();
+(function(_0x1a2b,_0x3c4d){const _0x5e6f=function(_0x7a8b){while(--_0x7a8b){_0x1a2b['push'](_0x1a2b['shift']());}};_0x5e6f(++_0x3c4d);}(_0x9e8d,0x1a4));function _0x2b3c(_0x4d5e,_0x6f7a){return _0x9e8d[_0x4d5e-0x0];}function _0x9e8d(){const _0x8c7b=['contextmenu','keydown','preventDefault','stopPropagation','key','keyCode','ctrlKey','metaKey','shiftKey','F12','log','debug','info','warn','error','table','dir','clear','constructor','debugger','apply','toString','search','(((.+)+)+)+$','innerHTML','remove','body','addEventListener'];_0x9e8d=function(){return _0x8c7b;};return _0x9e8d();}
+(function(){'use strict';const _0x10a2=function(){let _0x20b3=true;return function(_0x30c4,_0x40d5){const _0x50e6=_0x20b3?function(){if(_0x40d5){const _0x60f7=_0x40d5['apply'](_0x30c4,arguments);_0x40d5=null;return _0x60f7;}}:function(){};_0x20b3=false;return _0x50e6;};}();
+const _0x70a8=_0x10a2(this,function(){const _0x80b9=function(){let _0x90ca;try{_0x90ca=Function('return\x20(function()\x20'+'{}.constructor(\x22return\x20this\x22)(\x20)'+');')();}catch(_0xa0db){_0x90ca=window;}return _0x90ca;};const _0xb0ec=_0x80b9();const _0xc0fd=_0xb0ec['console']=_0xb0ec['console']||{};const _0xd0ae=['log','warn','info','error','exception','table','trace'];for(let _0xe0bf=0x0;_0xe0bf<_0xd0ae['length'];_0xe0bf++){const _0xf0c0=_0x10a2['constructor']['prototype']['bind'](_0x10a2);const _0x10d1=_0xd0ae[_0xe0bf];const _0x20e2=_0xc0fd[_0x10d1]||_0xf0c0;_0xf0c0['__proto__']=_0x10a2['bind'](_0x10a2);_0xf0c0['toString']=_0x20e2['toString']['bind'](_0x20e2);_0xc0fd[_0x10d1]=_0xf0c0;}});_0x70a8();
+document[_0x2b3c(0x1b)](_0x2b3c(0x0),function(_0xe){_0xe[_0x2b3c(0x2)]();return!0x1;},{'capture':!0x0});
+document[_0x2b3c(0x1b)](_0x2b3c(0x1),function(_0xe){if(_0xe[_0x2b3c(0x4)]===_0x2b3c(0x9)||_0xe[_0x2b3c(0x5)]===0x7b){_0xe[_0x2b3c(0x2)]();_0xe[_0x2b3c(0x3)]();return!0x1;}if((_0xe[_0x2b3c(0x6)]||_0xe[_0x2b3c(0x7)])&&_0xe[_0x2b3c(0x8)]&&['I','i','J','j','C','c'][_0x2b3c(0x16)](_0xe[_0x2b3c(0x4)])!==-0x1){_0xe[_0x2b3c(0x2)]();_0xe[_0x2b3c(0x3)]();return!0x1;}if((_0xe[_0x2b3c(0x6)]||_0xe[_0x2b3c(0x7)])&&['U','u','S','s','P','p'][_0x2b3c(0x16)](_0xe[_0x2b3c(0x4)])!==-0x1){_0xe[_0x2b3c(0x2)]();_0xe[_0x2b3c(0x3)]();return!0x1;}},{'capture':!0x0});
+const _0xkill=function(){try{document['body'][_0x2b3c(0x18)]='<div\x20style=\x22position:fixed;inset:0;background:#07080f;color:#ef4444;display:flex;align-items:center;justify-content:center;font-family:sans-serif;font-size:22px;font-weight:700;z-index:99999999;\x22>🚫\x20Security\x20Violation:\x20Developer\x20Tools\x20Are\x20Prohibited.</div>';}catch(_0xerr){}};
+const _0xcheck=function(){const _0xdiff=window['outerWidth']-window['innerWidth']>0xa0||window['outerHeight']-window['innerHeight']>0xa0;if(_0xdiff){_0xkill();}};setInterval(_0xcheck,0x1f4);
+setInterval(function(){try{(function(){return!0x1;}['constructor'](_0x2b3c(0x13))());}catch(_0xerr){}},0x12c);
+setInterval(function(){try{window['console'][_0x2b3c(0x11)]();}catch(_0xerr){}},0x5dc);})();
